@@ -118,7 +118,7 @@ struct AppHeader: View {
                 )
 
             VStack(alignment: .leading, spacing: 2) {
-                Text("CUStats")
+                Text("ClaudeUsage")
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(.primary)
 
