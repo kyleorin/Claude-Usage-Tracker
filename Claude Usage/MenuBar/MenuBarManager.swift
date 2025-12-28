@@ -210,68 +210,75 @@ class MenuBarManager: NSObject, ObservableObject {
 
     private func createBatteryStyle(usage: ClaudeUsage, isDarkMode: Bool, monochromeMode: Bool) -> NSImage {
         let percentage = CGFloat(usage.sessionPercentage) / 100.0
-        let width: CGFloat = 42
-        let totalHeight: CGFloat = 28
-        let barHeight: CGFloat = 10
+        let width: CGFloat = 44
+        let totalHeight: CGFloat = 22
+        let barHeight: CGFloat = 8
         let image = NSImage(size: NSSize(width: width, height: totalHeight))
 
         image.lockFocus()
         defer { image.unlockFocus() }
 
-        let outlineColor: NSColor = isDarkMode ? .white : .black
         let textColor: NSColor = isDarkMode ? .white : .black
-        let fillColor = monochromeMode ? (isDarkMode ? NSColor.white : NSColor.black) : getColorForUsageLevel(usage.statusLevel)
+        let fillColor = monochromeMode ? textColor : getColorForUsageLevel(usage.statusLevel)
+        let backgroundColor: NSColor = isDarkMode ? NSColor.white.withAlphaComponent(0.15) : NSColor.black.withAlphaComponent(0.1)
 
-        let barY = totalHeight - barHeight - 4
-        let barWidth = width - 2
-        let padding: CGFloat = 2.0
-
-        let containerPath = NSBezierPath(roundedRect: NSRect(x: 1, y: barY, width: barWidth, height: barHeight), xRadius: 2.5, yRadius: 2.5)
-        outlineColor.withAlphaComponent(0.5).setStroke()
-        containerPath.lineWidth = 1.2
-        containerPath.stroke()
-
-        let fillWidth = (barWidth - padding * 2) * percentage
-        if fillWidth > 1 {
-            let fillPath = NSBezierPath(roundedRect: NSRect(x: 1 + padding, y: barY + padding, width: fillWidth, height: barHeight - padding * 2), xRadius: 1.5, yRadius: 1.5)
-            fillColor.setFill()
-            fillPath.fill()
-        }
-
+        // Draw text label
         let textAttributes: [NSAttributedString.Key: Any] = [
-            .font: NSFont.systemFont(ofSize: 9, weight: .medium),
-            .foregroundColor: textColor.withAlphaComponent(0.85)
+            .font: NSFont.systemFont(ofSize: 10, weight: .medium),
+            .foregroundColor: textColor.withAlphaComponent(0.9)
         ]
         let text = "Claude" as NSString
         let textSize = text.size(withAttributes: textAttributes)
         let textX = (width - textSize.width) / 2
-        text.draw(at: NSPoint(x: textX, y: 2), withAttributes: textAttributes)
+        text.draw(at: NSPoint(x: textX, y: 1), withAttributes: textAttributes)
+
+        // Draw progress bar
+        let barY = totalHeight - barHeight - 2
+        let barWidth = width - 4
+        let barX: CGFloat = 2
+
+        // Background
+        let bgPath = NSBezierPath(roundedRect: NSRect(x: barX, y: barY, width: barWidth, height: barHeight), xRadius: 3, yRadius: 3)
+        backgroundColor.setFill()
+        bgPath.fill()
+
+        // Fill
+        let fillWidth = barWidth * percentage
+        if fillWidth > 2 {
+            let fillPath = NSBezierPath(roundedRect: NSRect(x: barX, y: barY, width: fillWidth, height: barHeight), xRadius: 3, yRadius: 3)
+            fillColor.setFill()
+            fillPath.fill()
+        }
 
         return image
     }
 
     private func createProgressBarStyle(usage: ClaudeUsage, isDarkMode: Bool, monochromeMode: Bool) -> NSImage {
-        let width: CGFloat = 40
+        let width: CGFloat = 36
         let height: CGFloat = 18
         let image = NSImage(size: NSSize(width: width, height: height))
 
         image.lockFocus()
         defer { image.unlockFocus() }
 
-        let fillColor = monochromeMode ? (isDarkMode ? NSColor.white : NSColor.black) : getColorForUsageLevel(usage.statusLevel)
-        let backgroundColor: NSColor = isDarkMode ? NSColor.white.withAlphaComponent(0.2) : NSColor.black.withAlphaComponent(0.15)
+        let textColor: NSColor = isDarkMode ? .white : .black
+        let fillColor = monochromeMode ? textColor : getColorForUsageLevel(usage.statusLevel)
+        let backgroundColor: NSColor = isDarkMode ? NSColor.white.withAlphaComponent(0.12) : NSColor.black.withAlphaComponent(0.08)
 
-        let barWidth: CGFloat = width - 2
-        let barHeight: CGFloat = 8
+        let barWidth: CGFloat = width - 4
+        let barHeight: CGFloat = 6
         let barY = (height - barHeight) / 2
+        let barX: CGFloat = 2
 
-        let bgPath = NSBezierPath(roundedRect: NSRect(x: 1, y: barY, width: barWidth, height: barHeight), xRadius: 4, yRadius: 4)
+        // Background pill
+        let bgPath = NSBezierPath(roundedRect: NSRect(x: barX, y: barY, width: barWidth, height: barHeight), xRadius: 3, yRadius: 3)
         backgroundColor.setFill()
         bgPath.fill()
 
+        // Fill pill
         let fillWidth = barWidth * CGFloat(usage.sessionPercentage / 100.0)
-        if fillWidth > 1 {
-            let fillPath = NSBezierPath(roundedRect: NSRect(x: 1, y: barY, width: fillWidth, height: barHeight), xRadius: 4, yRadius: 4)
+        if fillWidth > 2 {
+            let fillPath = NSBezierPath(roundedRect: NSRect(x: barX, y: barY, width: fillWidth, height: barHeight), xRadius: 3, yRadius: 3)
             fillColor.setFill()
             fillPath.fill()
         }
@@ -281,8 +288,9 @@ class MenuBarManager: NSObject, ObservableObject {
 
     private func createPercentageOnlyStyle(usage: ClaudeUsage, isDarkMode: Bool, monochromeMode: Bool) -> NSImage {
         let percentageText = "\(Int(usage.sessionPercentage))%"
-        let font = NSFont.monospacedDigitSystemFont(ofSize: 13, weight: .semibold)
-        let fillColor = monochromeMode ? (isDarkMode ? NSColor.white : NSColor.black) : getColorForUsageLevel(usage.statusLevel)
+        let font = NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .medium)
+        let textColor: NSColor = isDarkMode ? .white : .black
+        let fillColor = monochromeMode ? textColor : getColorForUsageLevel(usage.statusLevel)
 
         let attributes: [NSAttributedString.Key: Any] = [
             .font: font,
@@ -290,45 +298,47 @@ class MenuBarManager: NSObject, ObservableObject {
         ]
 
         let textSize = percentageText.size(withAttributes: attributes)
-        let image = NSImage(size: NSSize(width: textSize.width + 2, height: 18))
+        let image = NSImage(size: NSSize(width: textSize.width + 4, height: 18))
 
         image.lockFocus()
         defer { image.unlockFocus() }
 
         let textY = (18 - textSize.height) / 2
-        percentageText.draw(at: NSPoint(x: 1, y: textY), withAttributes: attributes)
+        percentageText.draw(at: NSPoint(x: 2, y: textY), withAttributes: attributes)
 
         return image
     }
 
     private func createIconWithBarStyle(usage: ClaudeUsage, isDarkMode: Bool, monochromeMode: Bool) -> NSImage {
-        let size: CGFloat = 20
+        let size: CGFloat = 18
         let image = NSImage(size: NSSize(width: size, height: size))
 
         image.lockFocus()
         defer { image.unlockFocus() }
 
         let textColor: NSColor = isDarkMode ? .white : .black
-        let fillColor = monochromeMode ? (isDarkMode ? NSColor.white : NSColor.black) : getColorForUsageLevel(usage.statusLevel)
+        let fillColor = monochromeMode ? textColor : getColorForUsageLevel(usage.statusLevel)
 
         let percentage = usage.sessionPercentage / 100.0
         let center = NSPoint(x: size / 2, y: size / 2)
-        let radius = (size - 3.5) / 2
+        let radius = (size - 4) / 2
+        let lineWidth: CGFloat = 3
         let startAngle: CGFloat = 90
-        let endAngle = startAngle + (360 * CGFloat(percentage))
+        let endAngle = startAngle - (360 * CGFloat(percentage))
 
+        // Background ring
         let bgArcPath = NSBezierPath()
         bgArcPath.appendArc(withCenter: center, radius: radius, startAngle: 0, endAngle: 360, clockwise: false)
-        textColor.withAlphaComponent(0.15).setStroke()
-        bgArcPath.lineWidth = 3.5
-        bgArcPath.lineCapStyle = .round
+        textColor.withAlphaComponent(0.12).setStroke()
+        bgArcPath.lineWidth = lineWidth
         bgArcPath.stroke()
 
+        // Progress ring (clockwise from top)
         if percentage > 0 {
             let arcPath = NSBezierPath()
-            arcPath.appendArc(withCenter: center, radius: radius, startAngle: startAngle, endAngle: endAngle, clockwise: false)
+            arcPath.appendArc(withCenter: center, radius: radius, startAngle: startAngle, endAngle: endAngle, clockwise: true)
             fillColor.setStroke()
-            arcPath.lineWidth = 3.5
+            arcPath.lineWidth = lineWidth
             arcPath.lineCapStyle = .round
             arcPath.stroke()
         }
@@ -337,18 +347,20 @@ class MenuBarManager: NSObject, ObservableObject {
     }
 
     private func createCompactStyle(usage: ClaudeUsage, isDarkMode: Bool, monochromeMode: Bool) -> NSImage {
-        let width: CGFloat = 8
+        let width: CGFloat = 12
         let height: CGFloat = 18
         let image = NSImage(size: NSSize(width: width, height: height))
 
         image.lockFocus()
         defer { image.unlockFocus() }
 
-        let fillColor = monochromeMode ? (isDarkMode ? NSColor.white : NSColor.black) : getColorForUsageLevel(usage.statusLevel)
-        let dotSize: CGFloat = 6
+        let textColor: NSColor = isDarkMode ? .white : .black
+        let fillColor = monochromeMode ? textColor : getColorForUsageLevel(usage.statusLevel)
+        let dotSize: CGFloat = 8
 
         let dotY = (height - dotSize) / 2
-        let dotRect = NSRect(x: (width - dotSize) / 2, y: dotY, width: dotSize, height: dotSize)
+        let dotX = (width - dotSize) / 2
+        let dotRect = NSRect(x: dotX, y: dotY, width: dotSize, height: dotSize)
         let dotPath = NSBezierPath(ovalIn: dotRect)
         fillColor.setFill()
         dotPath.fill()
@@ -358,9 +370,15 @@ class MenuBarManager: NSObject, ObservableObject {
 
     private func getColorForUsageLevel(_ level: UsageStatusLevel) -> NSColor {
         switch level {
-        case .safe: return NSColor.systemGreen
-        case .moderate: return NSColor.systemOrange
-        case .critical: return NSColor.systemRed
+        case .safe:
+            // Matches SettingsColors.accentGreen
+            return NSColor(red: 0.28, green: 0.75, blue: 0.42, alpha: 1.0)
+        case .moderate:
+            // Matches SettingsColors.accentOrange
+            return NSColor(red: 0.95, green: 0.55, blue: 0.25, alpha: 1.0)
+        case .critical:
+            // Matches SettingsColors.error
+            return NSColor(red: 0.92, green: 0.34, blue: 0.34, alpha: 1.0)
         }
     }
 
