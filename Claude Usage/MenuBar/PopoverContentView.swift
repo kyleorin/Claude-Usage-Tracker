@@ -11,9 +11,8 @@ struct PopoverContentView: View {
     @State private var lastRefreshTime = Date()
     @Environment(\.colorScheme) var colorScheme
 
-    private var isCompact: Bool {
-        DataStore.shared.loadCompactPopover()
-    }
+    @AppStorage(Constants.UserDefaultsKeys.compactPopover, store: UserDefaults(suiteName: Constants.appGroupIdentifier))
+    private var isCompact: Bool = false
 
     var body: some View {
         VStack(spacing: 0) {
