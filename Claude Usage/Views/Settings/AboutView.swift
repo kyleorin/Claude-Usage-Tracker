@@ -44,34 +44,25 @@ struct AboutView: View {
             GlassCard(title: "Resources") {
                 VStack(spacing: 0) {
                     AboutLink(
-                        title: "View on GitHub",
-                        subtitle: "Source code and releases",
-                        icon: "link",
-                        url: "https://github.com/hamed-elfayome/Claude-Usage-Tracker"
-                    )
-
-                    Divider().padding(.vertical, 8)
-
-                    AboutLink(
-                        title: "Report an Issue",
-                        subtitle: "Found a bug? Let us know",
-                        icon: "exclamationmark.bubble",
-                        url: "https://github.com/hamed-elfayome/Claude-Usage-Tracker/issues"
-                    )
-
-                    Divider().padding(.vertical, 8)
-
-                    AboutLink(
                         title: "Claude Status",
                         subtitle: "Check system status",
                         icon: "bolt.horizontal",
                         url: "https://status.claude.com"
                     )
+
+                    Divider().padding(.vertical, 8)
+
+                    AboutLink(
+                        title: "Anthropic",
+                        subtitle: "Learn more about Claude",
+                        icon: "sparkles",
+                        url: "https://www.anthropic.com"
+                    )
                 }
             }
 
-            // Legal Card
-            GlassCard(title: "Legal") {
+            // Info Card
+            GlassCard(title: "Info") {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
                         Text("License")
@@ -83,11 +74,11 @@ struct AboutView: View {
                     }
 
                     HStack {
-                        Text("Copyright")
+                        Text("Platform")
                             .font(.system(size: 12))
                             .foregroundColor(.secondary)
                         Spacer()
-                        Text("© 2025 Hamed Elfayome")
+                        Text("macOS 13+")
                             .font(.system(size: 12, weight: .medium))
                     }
                 }
