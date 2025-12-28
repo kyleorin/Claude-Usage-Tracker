@@ -8,13 +8,12 @@
 import Cocoa
 import SwiftUI
 
-/// Coordinates window lifecycle (popover, settings, GitHub prompt, detached window)
+/// Coordinates window lifecycle (popover, settings, detached window)
 final class WindowCoordinator: NSObject {
     private var popover: NSPopover?
     private var eventMonitor: Any?
     private var detachedWindow: NSWindow?
     private var settingsWindow: NSWindow?
-    private var githubPromptWindow: NSWindow?
 
     weak var manager: AnyObject?
 
@@ -89,7 +88,7 @@ final class WindowCoordinator: NSObject {
             backing: .buffered,
             defer: false
         )
-        window.title = "Claude Usage"
+        window.title = "CCStats"
         window.contentViewController = contentViewController
         window.level = .floating
         window.center()
@@ -140,35 +139,6 @@ final class WindowCoordinator: NSObject {
         }
     }
 
-    // MARK: - GitHub Star Prompt
-
-    func showGitHubPrompt(promptView: NSViewController) {
-        // If prompt window already exists, just bring it to front
-        if let existingWindow = githubPromptWindow, existingWindow.isVisible {
-            existingWindow.makeKeyAndOrderFront(nil)
-            NSApp.activate(ignoringOtherApps: true)
-            return
-        }
-
-        NSApp.setActivationPolicy(.regular)
-        NSApp.activate(ignoringOtherApps: true)
-
-        let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 500, height: 300),
-            styleMask: [.titled, .closable],
-            backing: .buffered,
-            defer: false
-        )
-        window.title = "Support Claude Usage Tracker"
-        window.contentViewController = promptView
-        window.center()
-        window.makeKeyAndOrderFront(nil)
-        window.delegate = self
-
-        githubPromptWindow = window
-        LoggingService.shared.logWindowEvent("GitHub prompt opened")
-    }
-
     // MARK: - Event Monitoring
 
     private func startMonitoringForOutsideClicks() {
@@ -194,8 +164,6 @@ final class WindowCoordinator: NSObject {
         detachedWindow = nil
         settingsWindow?.close()
         settingsWindow = nil
-        githubPromptWindow?.close()
-        githubPromptWindow = nil
         popover = nil
         LoggingService.shared.logWindowEvent("Window coordinator cleaned up")
     }
@@ -215,9 +183,6 @@ extension WindowCoordinator: NSWindowDelegate {
     func windowWillClose(_ notification: Notification) {
         if notification.object as? NSWindow === settingsWindow {
             settingsWindow = nil
-            NSApp.setActivationPolicy(.accessory)
-        } else if notification.object as? NSWindow === githubPromptWindow {
-            githubPromptWindow = nil
             NSApp.setActivationPolicy(.accessory)
         }
     }

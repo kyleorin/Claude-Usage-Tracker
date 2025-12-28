@@ -47,7 +47,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         let hostingController = NSHostingController(rootView: setupView)
 
         let window = NSWindow(contentViewController: hostingController)
-        window.title = "ClaudeUsage Setup"
+        window.title = "CCStats Setup"
         window.styleMask = [.titled, .closable, .fullSizeContentView]
         window.center()
         window.isReleasedWhenClosed = false
