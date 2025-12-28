@@ -1,10 +1,3 @@
-//
-//  NotificationsSettingsView.swift
-//  Claude Usage - Notifications Settings
-//
-//  Created by Claude Code on 2025-12-20.
-//
-
 import SwiftUI
 import UserNotifications
 
@@ -13,47 +6,56 @@ struct NotificationsSettingsView: View {
     @Binding var notificationsEnabled: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Spacing.sectionSpacing) {
-            // Header
-            SettingsHeader(
-                title: "Notifications",
-                subtitle: "Manage alerts and usage warnings"
-            )
-
-            Divider()
-
-            // Enable Notifications Toggle
-            SettingToggle(
-                title: "Enable notifications",
-                description: "Receive alerts when approaching usage limits",
-                isOn: $notificationsEnabled
-            )
-            .onChange(of: notificationsEnabled) { _, newValue in
-                DataStore.shared.saveNotificationsEnabled(newValue)
-
-                if newValue {
-                    requestNotificationPermission()
+        VStack(spacing: 16) {
+            // Enable Card
+            GlassCard(title: "Alerts") {
+                SettingRow(
+                    title: "Enable Notifications",
+                    subtitle: "Get alerts when approaching usage limits"
+                ) {
+                    Toggle("", isOn: $notificationsEnabled)
+                        .toggleStyle(.switch)
+                        .labelsHidden()
+                }
+                .onChange(of: notificationsEnabled) { _, newValue in
+                    DataStore.shared.saveNotificationsEnabled(newValue)
+                    if newValue {
+                        requestNotificationPermission()
+                    }
                 }
             }
 
+            // Thresholds Card
             if notificationsEnabled {
-                // Threshold indicators
-                VStack(alignment: .leading, spacing: Spacing.md) {
-                    Text("Alert Thresholds")
-                        .font(Typography.sectionHeader)
+                GlassCard(title: "Alert Thresholds") {
+                    VStack(spacing: 12) {
+                        ThresholdRow(percentage: 75, label: "Warning", color: SettingsColors.warning)
+                        ThresholdRow(percentage: 90, label: "High Usage", color: SettingsColors.accentOrange)
+                        ThresholdRow(percentage: 95, label: "Critical", color: SettingsColors.error)
 
-                    VStack(spacing: Spacing.sm) {
-                        ThresholdIndicator(level: "75%", color: SettingsColors.usageMedium, label: "Warning")
-                        ThresholdIndicator(level: "90%", color: SettingsColors.usageHigh, label: "High Usage")
-                        ThresholdIndicator(level: "95%", color: SettingsColors.usageCritical, label: "Critical")
-                        ThresholdIndicator(level: "0%", color: SettingsColors.usageLow, label: "Session Reset")
+                        Divider().padding(.vertical, 4)
+
+                        ThresholdRow(percentage: 0, label: "Session Reset", color: SettingsColors.success)
                     }
+                }
+            }
+
+            // Info Card
+            GlassCard {
+                HStack(alignment: .top, spacing: 12) {
+                    Image(systemName: "info.circle")
+                        .font(.system(size: 16))
+                        .foregroundColor(SettingsColors.accentBlue)
+
+                    Text("Notifications will appear as system alerts when your usage reaches these thresholds.")
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
 
             Spacer()
         }
-        .contentPadding()
     }
 
     private func requestNotificationPermission() {
@@ -73,35 +75,29 @@ struct NotificationsSettingsView: View {
     }
 }
 
-// MARK: - Supporting Components
+// MARK: - Threshold Row
 
-struct ThresholdIndicator: View {
-    let level: String
-    let color: Color
+struct ThresholdRow: View {
+    let percentage: Int
     let label: String
+    let color: Color
 
     var body: some View {
-        HStack(spacing: Spacing.iconTextSpacing) {
+        HStack(spacing: 12) {
             Circle()
                 .fill(color)
                 .frame(width: 8, height: 8)
 
-            Text(level)
-                .font(Typography.monospacedInput)
+            Text("\(percentage)%")
+                .font(.system(size: 13, weight: .medium, design: .monospaced))
                 .foregroundColor(.primary)
+                .frame(width: 40, alignment: .leading)
 
             Text(label)
-                .font(Typography.label)
+                .font(.system(size: 12))
                 .foregroundColor(.secondary)
 
             Spacer()
         }
     }
-}
-
-// MARK: - Previews
-
-#Preview {
-    NotificationsSettingsView(notificationsEnabled: .constant(true))
-        .frame(width: 520, height: 600)
 }

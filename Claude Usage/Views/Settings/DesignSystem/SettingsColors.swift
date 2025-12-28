@@ -1,83 +1,75 @@
-//
-//  SettingsColors.swift
-//  Claude Usage - Settings Design System
-//
-//  Created by Claude Code on 2025-12-20.
-//
-
 import SwiftUI
 
-/// Semantic color palette for Settings UI
-/// Provides consistent colors across all settings views
+/// Modern macOS-native color palette
 enum SettingsColors {
-    // MARK: - Status Colors
+    // MARK: - Accent Colors
+    static let accent = Color.accentColor
+    static let accentGreen = Color(red: 0.28, green: 0.75, blue: 0.42)
+    static let accentBlue = Color(red: 0.35, green: 0.55, blue: 0.85)
+    static let accentPurple = Color(red: 0.55, green: 0.36, blue: 0.76)
+    static let accentOrange = Color(red: 0.95, green: 0.55, blue: 0.25)
+    static let accentRed = Color(red: 0.92, green: 0.34, blue: 0.34)
 
-    /// Success state (green)
-    static let success = Color.green
+    // MARK: - Surfaces
+    static let surfacePrimary = Color(nsColor: .windowBackgroundColor)
+    static let surfaceSecondary = Color(nsColor: .controlBackgroundColor)
+    static let surfaceTertiary = Color(nsColor: .underPageBackgroundColor)
 
-    /// Error state (red)
-    static let error = Color.red
+    // MARK: - Glass Effects
+    static let glassBackground = Color.white.opacity(0.05)
+    static let glassBorder = Color.white.opacity(0.1)
+    static let glassHighlight = Color.white.opacity(0.15)
 
-    /// Warning state (orange)
-    static let warning = Color.orange
+    // MARK: - Text
+    static let textPrimary = Color.primary
+    static let textSecondary = Color.secondary
+    static let textTertiary = Color.secondary.opacity(0.6)
 
-    /// Informational state (blue)
-    static let info = Color.blue
+    // MARK: - Status
+    static let success = Color(red: 0.28, green: 0.75, blue: 0.42)
+    static let warning = Color(red: 0.95, green: 0.68, blue: 0.25)
+    static let error = Color(red: 0.92, green: 0.34, blue: 0.34)
+    static let info = Color(red: 0.35, green: 0.55, blue: 0.85)
 
-    /// Caution state (yellow)
-    static let caution = Color.yellow
+    // MARK: - Sidebar
+    static let sidebarBackground = Color(nsColor: .controlBackgroundColor).opacity(0.5)
+    static let sidebarSelected = Color.accentColor
+    static let sidebarHover = Color.primary.opacity(0.05)
+}
 
-    // MARK: - Semantic UI Colors
+/// Glass-style view modifiers
+struct GlassBackground: ViewModifier {
+    var cornerRadius: CGFloat = 12
+    var padding: CGFloat = 0
 
-    /// Primary action color (system accent)
-    static let primary = Color.accentColor
+    func body(content: Content) -> some View {
+        content
+            .padding(padding)
+            .background(
+                RoundedRectangle(cornerRadius: cornerRadius)
+                    .fill(.ultraThinMaterial)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: cornerRadius)
+                    .stroke(Color.white.opacity(0.1), lineWidth: 0.5)
+            )
+    }
+}
 
-    /// Secondary elements
-    static let secondary = Color.secondary
+struct SoftShadow: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 2)
+            .shadow(color: .black.opacity(0.04), radius: 2, x: 0, y: 1)
+    }
+}
 
-    /// Card background
-    static let cardBackground = Color(nsColor: .controlBackgroundColor)
-
-    /// Input field background
-    static let inputBackground = Color(nsColor: .textBackgroundColor)
-
-    /// Border color for inputs and cards
-    static let border = Color.gray.opacity(0.2)
-
-    // MARK: - Feature-Specific Colors
-
-    /// Icon color for feature highlights
-    static let featureIcon = Color.blue
-
-    /// Beta badge color
-    static let betaBadge = Color.orange
-
-    /// Pro feature badge
-    static let proBadge = Color.purple
-
-    // MARK: - Threshold Colors (for usage indicators)
-
-    /// Low usage (0-50%)
-    static let usageLow = Color.green
-
-    /// Medium usage (50-75%)
-    static let usageMedium = Color.yellow
-
-    /// High usage (75-90%)
-    static let usageHigh = Color.orange
-
-    /// Critical usage (90%+)
-    static let usageCritical = Color.red
-
-    // MARK: - Opacity Variants
-
-    /// Light background overlay (for cards on cards)
-    static func lightOverlay(_ color: Color, opacity: Double = 0.1) -> Color {
-        return color.opacity(opacity)
+extension View {
+    func glassBackground(cornerRadius: CGFloat = 12, padding: CGFloat = 0) -> some View {
+        modifier(GlassBackground(cornerRadius: cornerRadius, padding: padding))
     }
 
-    /// Border with opacity
-    static func borderColor(_ color: Color, opacity: Double = 0.3) -> Color {
-        return color.opacity(opacity)
+    func softShadow() -> some View {
+        modifier(SoftShadow())
     }
 }

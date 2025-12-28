@@ -1,10 +1,3 @@
-//
-//  SessionManagementView.swift
-//  Claude Usage - Automatic Session Management
-//
-//  Created by Claude Code on 2025-12-20.
-//
-
 import SwiftUI
 
 /// Automatic session management settings
@@ -12,47 +5,92 @@ struct SessionManagementView: View {
     @Binding var autoStartSessionEnabled: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Spacing.sectionSpacing) {
-            // Header
-            SettingsHeader(
-                title: "Session Management",
-                subtitle: "Automatic session initialization and maintenance"
-            )
+        VStack(spacing: 16) {
+            // Auto-Start Card
+            GlassCard(title: "Automatic Sessions") {
+                VStack(alignment: .leading, spacing: 16) {
+                    SettingRow(
+                        title: "Auto-start on Reset",
+                        subtitle: "Initialize a new session when the current one expires"
+                    ) {
+                        Toggle("", isOn: $autoStartSessionEnabled)
+                            .toggleStyle(.switch)
+                            .labelsHidden()
+                    }
+                    .onChange(of: autoStartSessionEnabled) { _, newValue in
+                        DataStore.shared.saveAutoStartSessionEnabled(newValue)
+                    }
 
-            Divider()
+                    if autoStartSessionEnabled {
+                        Divider()
 
-            // Auto-Start Session Toggle
-            SettingToggle(
-                title: "Auto-start session on reset",
-                description: "Automatically initialize a new 5-hour session when the current one expires",
-                badge: .beta,
-                isOn: $autoStartSessionEnabled
-            )
-            .onChange(of: autoStartSessionEnabled) { _, newValue in
-                DataStore.shared.saveAutoStartSessionEnabled(newValue)
+                        // Beta Badge
+                        HStack {
+                            Text("BETA")
+                                .font(.system(size: 9, weight: .bold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 3)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 4)
+                                        .fill(SettingsColors.accentOrange)
+                                )
+
+                            Text("This feature is experimental")
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
             }
 
+            // How It Works Card
             if autoStartSessionEnabled {
-                VStack(alignment: .leading, spacing: Spacing.md) {
-                    Text("How it works")
-                        .font(Typography.sectionHeader)
-
-                    Text("• Detects when your session resets to 0%\n• Sends 'Hi' to Claude 3.5 Haiku (cheapest model)\n• Uses a temporary chat that won't appear in your history\n• New 5-hour session is ready instantly")
-                        .font(Typography.caption)
-                        .foregroundColor(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
+                GlassCard(title: "How It Works") {
+                    VStack(alignment: .leading, spacing: 10) {
+                        HowItWorksRow(
+                            number: 1,
+                            text: "Detects when your session resets to 0%"
+                        )
+                        HowItWorksRow(
+                            number: 2,
+                            text: "Sends 'Hi' to Claude 3.5 Haiku (cheapest model)"
+                        )
+                        HowItWorksRow(
+                            number: 3,
+                            text: "Uses a temporary chat that won't appear in history"
+                        )
+                        HowItWorksRow(
+                            number: 4,
+                            text: "New 5-hour session is ready instantly"
+                        )
+                    }
                 }
             }
 
             Spacer()
         }
-        .contentPadding()
     }
 }
 
-// MARK: - Previews
+// MARK: - How It Works Row
 
-#Preview {
-    SessionManagementView(autoStartSessionEnabled: .constant(true))
-        .frame(width: 520, height: 600)
+struct HowItWorksRow: View {
+    let number: Int
+    let text: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Text("\(number)")
+                .font(.system(size: 11, weight: .bold, design: .rounded))
+                .foregroundColor(.white)
+                .frame(width: 20, height: 20)
+                .background(Circle().fill(SettingsColors.accentBlue))
+
+            Text(text)
+                .font(.system(size: 12))
+                .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
 }
