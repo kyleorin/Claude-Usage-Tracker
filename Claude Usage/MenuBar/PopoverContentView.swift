@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Compact Raycast-inspired popover
+/// Popover with card or compact mode
 struct PopoverContentView: View {
     @ObservedObject var manager: MenuBarManager
     let onRefresh: () -> Void
@@ -10,6 +10,10 @@ struct PopoverContentView: View {
     @State private var isRefreshing = false
     @State private var lastRefreshTime = Date()
     @Environment(\.colorScheme) var colorScheme
+
+    private var isCompact: Bool {
+        DataStore.shared.loadCompactPopover()
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -25,53 +29,12 @@ struct PopoverContentView: View {
                 .frame(height: 1)
                 .padding(.horizontal, 14)
 
-            // Content - no scroll, compact
-            VStack(spacing: 8) {
-                // Current Session - always show
-                MetricRow(
-                    title: "Session",
-                    percentage: manager.usage.sessionPercentage,
-                    resetTime: manager.usage.sessionResetTime
-                )
-
-                // Weekly Usage - always show
-                MetricRow(
-                    title: "Weekly",
-                    percentage: manager.usage.weeklyPercentage,
-                    resetTime: manager.usage.weeklyResetTime
-                )
-
-                // Sonnet Weekly (if applicable)
-                if manager.usage.opusWeeklyTokensUsed > 0 || manager.usage.opusWeeklyPercentage > 0 {
-                    MetricRow(
-                        title: "Sonnet",
-                        percentage: manager.usage.opusWeeklyPercentage,
-                        resetTime: nil
-                    )
-                }
-
-                // Extra Usage (if applicable)
-                if let used = manager.usage.costUsed, let limit = manager.usage.costLimit, limit > 0 {
-                    MetricRow(
-                        title: "Extra",
-                        percentage: (used / limit) * 100.0,
-                        resetTime: nil,
-                        subtitle: String(format: "$%.2f", used)
-                    )
-                }
-
-                // API Usage (if enabled)
-                if let apiUsage = manager.apiUsage, DataStore.shared.loadAPITrackingEnabled() {
-                    MetricRow(
-                        title: "API",
-                        percentage: apiUsage.usagePercentage,
-                        resetTime: nil,
-                        subtitle: apiUsage.formattedUsed
-                    )
-                }
+            // Content - Card or Compact mode
+            if isCompact {
+                compactContent
+            } else {
+                cardContent
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
 
             // Footer
             PopoverFooter(
@@ -93,12 +56,84 @@ struct PopoverContentView: View {
                 onQuit: onQuit
             )
         }
-        .frame(width: 260)
-        .background(
-            ZStack {
-                VisualEffectView(material: .popover, blendingMode: .behindWindow)
+        .frame(width: isCompact ? 240 : 280)
+        .background(VisualEffectView(material: .popover, blendingMode: .behindWindow))
+    }
+
+    // MARK: - Card Content
+    private var cardContent: some View {
+        VStack(spacing: 8) {
+            MetricCard(
+                icon: "clock.fill",
+                iconGradient: [Color.orange, Color.orange.opacity(0.7)],
+                title: "Session",
+                percentage: manager.usage.sessionPercentage,
+                resetTime: manager.usage.sessionResetTime
+            )
+
+            MetricCard(
+                icon: "calendar",
+                iconGradient: [Color.purple, Color.purple.opacity(0.7)],
+                title: "Weekly",
+                percentage: manager.usage.weeklyPercentage,
+                resetTime: manager.usage.weeklyResetTime
+            )
+
+            if manager.usage.opusWeeklyTokensUsed > 0 || manager.usage.opusWeeklyPercentage > 0 {
+                MetricCard(
+                    icon: "sparkles",
+                    iconGradient: [Color.blue, Color.cyan],
+                    title: "Sonnet",
+                    percentage: manager.usage.opusWeeklyPercentage,
+                    resetTime: nil
+                )
             }
-        )
+
+            if let used = manager.usage.costUsed, let limit = manager.usage.costLimit, limit > 0 {
+                MetricCard(
+                    icon: "dollarsign.circle.fill",
+                    iconGradient: [Color.green, Color.mint],
+                    title: "Extra",
+                    percentage: (used / limit) * 100.0,
+                    resetTime: nil,
+                    subtitle: String(format: "$%.2f", used)
+                )
+            }
+
+            if let apiUsage = manager.apiUsage, DataStore.shared.loadAPITrackingEnabled() {
+                MetricCard(
+                    icon: "server.rack",
+                    iconGradient: [Color.cyan, Color.teal],
+                    title: "API",
+                    percentage: apiUsage.usagePercentage,
+                    resetTime: nil,
+                    subtitle: apiUsage.formattedUsed
+                )
+            }
+        }
+        .padding(10)
+    }
+
+    // MARK: - Compact Content
+    private var compactContent: some View {
+        VStack(spacing: 6) {
+            CompactRow(title: "Session", percentage: manager.usage.sessionPercentage, resetTime: manager.usage.sessionResetTime)
+            CompactRow(title: "Weekly", percentage: manager.usage.weeklyPercentage, resetTime: manager.usage.weeklyResetTime)
+
+            if manager.usage.opusWeeklyTokensUsed > 0 || manager.usage.opusWeeklyPercentage > 0 {
+                CompactRow(title: "Sonnet", percentage: manager.usage.opusWeeklyPercentage, resetTime: nil)
+            }
+
+            if let used = manager.usage.costUsed, let limit = manager.usage.costLimit, limit > 0 {
+                CompactRow(title: "Extra", percentage: (used / limit) * 100.0, resetTime: nil, subtitle: String(format: "$%.2f", used))
+            }
+
+            if let apiUsage = manager.apiUsage, DataStore.shared.loadAPITrackingEnabled() {
+                CompactRow(title: "API", percentage: apiUsage.usagePercentage, resetTime: nil, subtitle: apiUsage.formattedUsed)
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
     }
 }
 
@@ -136,7 +171,6 @@ struct PopoverHeader: View {
 
             Spacer()
 
-            // Status dot
             Circle()
                 .fill(Color.green)
                 .frame(width: 6, height: 6)
@@ -144,8 +178,10 @@ struct PopoverHeader: View {
     }
 }
 
-// MARK: - Metric Row (Compact)
-struct MetricRow: View {
+// MARK: - Metric Card (Default)
+struct MetricCard: View {
+    let icon: String
+    let iconGradient: [Color]
     let title: String
     let percentage: Double
     var resetTime: Date? = nil
@@ -164,13 +200,97 @@ struct MetricRow: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            // Title
+            ZStack {
+                RoundedRectangle(cornerRadius: 5)
+                    .fill(LinearGradient(colors: iconGradient, startPoint: .topLeading, endPoint: .bottomTrailing))
+                    .frame(width: 22, height: 22)
+
+                Image(systemName: icon)
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundColor(.white)
+            }
+
             Text(title)
-                .font(.system(size: 12))
-                .foregroundColor(.secondary)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundColor(.primary)
                 .frame(width: 50, alignment: .leading)
 
-            // Progress bar
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 2.5)
+                        .fill(Color.primary.opacity(0.1))
+
+                    RoundedRectangle(cornerRadius: 2.5)
+                        .fill(statusColor)
+                        .frame(width: geo.size.width * min(max(percentage / 100.0, 0), 1))
+                }
+            }
+            .frame(height: 5)
+
+            Text("\(Int(percentage))%")
+                .font(.system(size: 13, weight: .bold, design: .rounded))
+                .foregroundColor(statusColor)
+                .frame(width: 38, alignment: .trailing)
+
+            if let resetTime = resetTime {
+                Text(formatTime(resetTime))
+                    .font(.system(size: 9))
+                    .foregroundColor(.secondary)
+                    .frame(width: 28, alignment: .trailing)
+            } else if let subtitle = subtitle {
+                Text(subtitle)
+                    .font(.system(size: 9))
+                    .foregroundColor(.secondary)
+                    .frame(width: 28, alignment: .trailing)
+            } else {
+                Spacer().frame(width: 28)
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color(nsColor: .controlBackgroundColor).opacity(colorScheme == .dark ? 0.4 : 0.6))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color.primary.opacity(0.06), lineWidth: 0.5)
+        )
+    }
+
+    private func formatTime(_ date: Date) -> String {
+        let diff = date.timeIntervalSince(Date())
+        guard diff > 0 else { return "now" }
+        let hours = Int(diff) / 3600
+        if hours >= 24 { return "\(hours / 24)d" }
+        if hours > 0 { return "\(hours)h" }
+        return "\((Int(diff) % 3600) / 60)m"
+    }
+}
+
+// MARK: - Compact Row
+struct CompactRow: View {
+    let title: String
+    let percentage: Double
+    var resetTime: Date? = nil
+    var subtitle: String? = nil
+
+    private var statusColor: Color {
+        switch percentage {
+        case 0..<50: return Color(red: 0.34, green: 0.80, blue: 0.50)
+        case 50..<75: return Color(red: 1.0, green: 0.75, blue: 0.30)
+        case 75..<90: return Color(red: 1.0, green: 0.55, blue: 0.30)
+        default: return Color(red: 1.0, green: 0.40, blue: 0.40)
+        }
+    }
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Text(title)
+                .font(.system(size: 11))
+                .foregroundColor(.secondary)
+                .frame(width: 45, alignment: .leading)
+
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
                     RoundedRectangle(cornerRadius: 2)
@@ -183,42 +303,33 @@ struct MetricRow: View {
             }
             .frame(height: 4)
 
-            // Percentage
             Text("\(Int(percentage))%")
-                .font(.system(size: 12, weight: .medium, design: .rounded))
+                .font(.system(size: 11, weight: .medium, design: .rounded))
                 .foregroundColor(statusColor)
-                .frame(width: 36, alignment: .trailing)
+                .frame(width: 32, alignment: .trailing)
 
-            // Reset time or subtitle
             if let resetTime = resetTime {
-                Text(formatResetTime(resetTime))
-                    .font(.system(size: 10))
+                Text(formatTime(resetTime))
+                    .font(.system(size: 9))
                     .foregroundColor(.secondary.opacity(0.6))
-                    .frame(width: 40, alignment: .trailing)
+                    .frame(width: 24, alignment: .trailing)
             } else if let subtitle = subtitle {
                 Text(subtitle)
-                    .font(.system(size: 10))
+                    .font(.system(size: 9))
                     .foregroundColor(.secondary.opacity(0.6))
-                    .frame(width: 40, alignment: .trailing)
+                    .frame(width: 24, alignment: .trailing)
             }
         }
-        .frame(height: 20)
+        .frame(height: 18)
     }
 
-    private func formatResetTime(_ date: Date) -> String {
+    private func formatTime(_ date: Date) -> String {
         let diff = date.timeIntervalSince(Date())
         guard diff > 0 else { return "now" }
-
         let hours = Int(diff) / 3600
-        let minutes = (Int(diff) % 3600) / 60
-
-        if hours >= 24 {
-            return "\(hours / 24)d"
-        } else if hours > 0 {
-            return "\(hours)h"
-        } else {
-            return "\(minutes)m"
-        }
+        if hours >= 24 { return "\(hours / 24)d" }
+        if hours > 0 { return "\(hours)h" }
+        return "\((Int(diff) % 3600) / 60)m"
     }
 }
 
@@ -243,7 +354,6 @@ struct PopoverFooter: View {
 
     var body: some View {
         HStack(spacing: 4) {
-            // Refresh
             Button(action: onRefresh) {
                 HStack(spacing: 3) {
                     if isRefreshing {
@@ -271,7 +381,6 @@ struct PopoverFooter: View {
 
             Spacer()
 
-            // Settings
             Button(action: onSettings) {
                 Image(systemName: "gearshape")
                     .font(.system(size: 11))
@@ -285,7 +394,6 @@ struct PopoverFooter: View {
             .buttonStyle(.plain)
             .onHover { settingsHovered = $0 }
 
-            // Quit
             Button(action: onQuit) {
                 Image(systemName: "power")
                     .font(.system(size: 10, weight: .medium))
