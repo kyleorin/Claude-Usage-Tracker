@@ -1,7 +1,7 @@
 import SwiftUI
 import UserNotifications
 
-/// Raycast-inspired Settings interface with liquid glass aesthetic
+/// Clean Raycast-style Settings interface
 struct SettingsView: View {
     @State private var selectedSection: SettingsSection = .general
     @State private var notificationsEnabled: Bool = DataStore.shared.loadNotificationsEnabled()
@@ -13,30 +13,9 @@ struct SettingsView: View {
         NavigationSplitView {
             // Sidebar
             VStack(spacing: 0) {
-                // App header
-                HStack(spacing: 10) {
-                    Image("HeaderLogo")
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(width: 24, height: 24)
-
-                    Text("Settings")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(.primary)
-
-                    Spacer()
-                }
-                .padding(.horizontal, 16)
-                .padding(.top, 12)
-                .padding(.bottom, 8)
-
-                Divider()
-                    .opacity(0.5)
-                    .padding(.horizontal, 12)
-
                 // Navigation items
                 ScrollView {
-                    VStack(spacing: 2) {
+                    VStack(spacing: 1) {
                         ForEach(SettingsSection.allCases, id: \.self) { section in
                             SidebarItem(
                                 section: section,
@@ -49,8 +28,7 @@ struct SettingsView: View {
                     .padding(.top, 8)
                 }
             }
-            .background(Color.black.opacity(colorScheme == .dark ? 0.2 : 0.02))
-            .navigationSplitViewColumnWidth(min: 180, ideal: 200, max: 220)
+            .navigationSplitViewColumnWidth(min: 160, ideal: 180, max: 200)
         } detail: {
             // Content
             ScrollView {
@@ -65,14 +43,9 @@ struct SettingsView: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(
-                ZStack {
-                    Color(nsColor: .windowBackgroundColor)
-                    Color.black.opacity(colorScheme == .dark ? 0.15 : 0)
-                }
-            )
+            .background(Color(nsColor: .windowBackgroundColor))
         }
-        .frame(width: 740, height: 520)
+        .frame(width: 680, height: 480)
     }
 
     @ViewBuilder
@@ -109,13 +82,13 @@ enum SettingsSection: String, CaseIterable {
 
     var icon: String {
         switch self {
-        case .general: return "gearshape.fill"
-        case .appearance: return "paintbrush.fill"
-        case .notifications: return "bell.fill"
-        case .session: return "clock.arrow.circlepath"
-        case .claudeCode: return "terminal.fill"
+        case .general: return "gearshape"
+        case .appearance: return "paintbrush"
+        case .notifications: return "bell"
+        case .session: return "clock"
+        case .claudeCode: return "terminal"
         case .api: return "server.rack"
-        case .about: return "info.circle.fill"
+        case .about: return "info.circle"
         }
     }
 
@@ -130,33 +103,9 @@ enum SettingsSection: String, CaseIterable {
         case .about: return "Version and info"
         }
     }
-
-    var gradient: LinearGradient {
-        switch self {
-        case .general: return SettingsColors.gradient(Color.gray, dark: Color.gray.opacity(0.7))
-        case .appearance: return SettingsColors.purpleGradient
-        case .notifications: return SettingsColors.redGradient
-        case .session: return SettingsColors.blueGradient
-        case .claudeCode: return SettingsColors.greenGradient
-        case .api: return SettingsColors.orangeGradient
-        case .about: return SettingsColors.cyanGradient
-        }
-    }
-
-    var color: Color {
-        switch self {
-        case .general: return .gray
-        case .appearance: return SettingsColors.accentPurple
-        case .notifications: return SettingsColors.accentRed
-        case .session: return SettingsColors.accentBlue
-        case .claudeCode: return SettingsColors.accentGreen
-        case .api: return SettingsColors.accentOrange
-        case .about: return SettingsColors.accentCyan
-        }
-    }
 }
 
-// MARK: - Sidebar Item
+// MARK: - Sidebar Item (Raycast style - monochrome)
 
 struct SidebarItem: View {
     let section: SettingsSection
@@ -168,39 +117,26 @@ struct SidebarItem: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 10) {
-                // Icon with gradient
-                ZStack {
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(section.gradient)
-                        .frame(width: 24, height: 24)
-
-                    Image(systemName: section.icon)
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(.white)
-                }
+            HStack(spacing: 8) {
+                Image(systemName: section.icon)
+                    .font(.system(size: 13))
+                    .foregroundColor(isSelected ? .primary : .secondary)
+                    .frame(width: 18)
 
                 Text(section.rawValue)
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(.primary)
+                    .font(.system(size: 12, weight: isSelected ? .medium : .regular))
+                    .foregroundColor(isSelected ? .primary : .secondary)
 
                 Spacer()
             }
             .padding(.horizontal, 10)
-            .padding(.vertical, 8)
+            .padding(.vertical, 6)
             .background(
-                RoundedRectangle(cornerRadius: 8)
+                RoundedRectangle(cornerRadius: 6)
                     .fill(
                         isSelected
-                            ? Color.white.opacity(colorScheme == .dark ? 0.1 : 0.8)
-                            : (isHovered ? Color.white.opacity(colorScheme == .dark ? 0.05 : 0.4) : Color.clear)
-                    )
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 8)
-                    .stroke(
-                        isSelected ? Color.white.opacity(colorScheme == .dark ? 0.1 : 0.3) : Color.clear,
-                        lineWidth: 0.5
+                            ? Color.primary.opacity(colorScheme == .dark ? 0.12 : 0.08)
+                            : (isHovered ? Color.primary.opacity(0.04) : Color.clear)
                     )
             )
         }
@@ -213,38 +149,20 @@ struct SidebarItem: View {
 
 struct SectionHeader: View {
     let section: SettingsSection
-    @Environment(\.colorScheme) var colorScheme
 
     var body: some View {
-        HStack(spacing: 14) {
-            // Icon badge with glow
-            ZStack {
-                // Glow effect
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(section.gradient)
-                    .frame(width: 44, height: 44)
-                    .blur(radius: 12)
-                    .opacity(0.4)
+        HStack(spacing: 12) {
+            Image(systemName: section.icon)
+                .font(.system(size: 18))
+                .foregroundColor(.secondary)
 
-                // Icon badge
-                ZStack {
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(section.gradient)
-                        .frame(width: 44, height: 44)
-
-                    Image(systemName: section.icon)
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundColor(.white)
-                }
-            }
-
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text(section.rawValue)
-                    .font(.system(size: 20, weight: .bold))
+                    .font(.system(size: 18, weight: .semibold))
                     .foregroundColor(.primary)
 
                 Text(section.description)
-                    .font(.system(size: 12))
+                    .font(.system(size: 11))
                     .foregroundColor(.secondary)
             }
 
@@ -252,7 +170,7 @@ struct SectionHeader: View {
         }
         .padding(.horizontal, 24)
         .padding(.top, 20)
-        .padding(.bottom, 14)
+        .padding(.bottom, 12)
     }
 }
 
@@ -269,27 +187,25 @@ struct GlassCard<Content: View>: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 10) {
             if let title = title {
                 Text(title)
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: 11, weight: .medium))
                     .foregroundColor(.secondary)
                     .textCase(.uppercase)
-                    .tracking(0.5)
             }
 
             content
         }
-        .padding(16)
+        .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
-            ZStack {
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color.white.opacity(colorScheme == .dark ? 0.05 : 0.6))
-
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color.white.opacity(colorScheme == .dark ? 0.08 : 0.3), lineWidth: 0.5)
-            }
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color(nsColor: .controlBackgroundColor))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color.primary.opacity(0.06), lineWidth: 0.5)
         )
     }
 }
@@ -299,33 +215,20 @@ struct GlassCard<Content: View>: View {
 struct SettingRow<Control: View>: View {
     let title: String
     var subtitle: String? = nil
-    var icon: String? = nil
-    var iconColor: Color = .secondary
     let control: Control
 
     init(
         title: String,
         subtitle: String? = nil,
-        icon: String? = nil,
-        iconColor: Color = .secondary,
         @ViewBuilder control: () -> Control
     ) {
         self.title = title
         self.subtitle = subtitle
-        self.icon = icon
-        self.iconColor = iconColor
         self.control = control()
     }
 
     var body: some View {
         HStack(alignment: subtitle != nil ? .top : .center, spacing: 12) {
-            if let icon = icon {
-                Image(systemName: icon)
-                    .font(.system(size: 14))
-                    .foregroundColor(iconColor)
-                    .frame(width: 20)
-            }
-
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .font(.system(size: 13))
@@ -349,12 +252,8 @@ struct SettingRow<Control: View>: View {
 // MARK: - Divider Row
 
 struct SettingsDivider: View {
-    @Environment(\.colorScheme) var colorScheme
-
     var body: some View {
-        Rectangle()
-            .fill(Color.white.opacity(colorScheme == .dark ? 0.06 : 0.3))
-            .frame(height: 1)
-            .padding(.vertical, 6)
+        Divider()
+            .padding(.vertical, 4)
     }
 }

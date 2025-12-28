@@ -61,29 +61,6 @@ struct AboutView: View {
                 }
             }
 
-            // Info Card
-            GlassCard(title: "Info") {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Text("License")
-                            .font(.system(size: 12))
-                            .foregroundColor(.secondary)
-                        Spacer()
-                        Text("MIT")
-                            .font(.system(size: 12, weight: .medium))
-                    }
-
-                    HStack {
-                        Text("Platform")
-                            .font(.system(size: 12))
-                            .foregroundColor(.secondary)
-                        Spacer()
-                        Text("macOS 13+")
-                            .font(.system(size: 12, weight: .medium))
-                    }
-                }
-            }
-
             Spacer()
         }
     }

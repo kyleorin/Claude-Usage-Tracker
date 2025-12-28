@@ -210,42 +210,46 @@ class MenuBarManager: NSObject, ObservableObject {
 
     private func createBatteryStyle(usage: ClaudeUsage, isDarkMode: Bool, monochromeMode: Bool) -> NSImage {
         let percentage = CGFloat(usage.sessionPercentage) / 100.0
-        let width: CGFloat = 44
-        let totalHeight: CGFloat = 22
-        let barHeight: CGFloat = 8
-        let image = NSImage(size: NSSize(width: width, height: totalHeight))
+        let width: CGFloat = 26
+        let height: CGFloat = 18
+        let image = NSImage(size: NSSize(width: width, height: height))
 
         image.lockFocus()
         defer { image.unlockFocus() }
 
-        let textColor: NSColor = isDarkMode ? .white : .black
-        let fillColor = monochromeMode ? textColor : getColorForUsageLevel(usage.statusLevel)
-        let backgroundColor: NSColor = isDarkMode ? NSColor.white.withAlphaComponent(0.15) : NSColor.black.withAlphaComponent(0.1)
+        let strokeColor: NSColor = isDarkMode ? .white.withAlphaComponent(0.7) : .black.withAlphaComponent(0.6)
+        let fillColor = monochromeMode ? strokeColor : getColorForUsageLevel(usage.statusLevel)
 
-        // Draw text label
-        let textAttributes: [NSAttributedString.Key: Any] = [
-            .font: NSFont.systemFont(ofSize: 10, weight: .medium),
-            .foregroundColor: textColor.withAlphaComponent(0.9)
-        ]
-        let text = "Claude" as NSString
-        let textSize = text.size(withAttributes: textAttributes)
-        let textX = (width - textSize.width) / 2
-        text.draw(at: NSPoint(x: textX, y: 1), withAttributes: textAttributes)
+        // Battery body dimensions
+        let bodyWidth: CGFloat = 20
+        let bodyHeight: CGFloat = 10
+        let bodyX: CGFloat = 1
+        let bodyY: CGFloat = (height - bodyHeight) / 2
+        let cornerRadius: CGFloat = 2.5
 
-        // Draw progress bar
-        let barY = totalHeight - barHeight - 2
-        let barWidth = width - 4
-        let barX: CGFloat = 2
+        // Draw battery outline
+        let bodyRect = NSRect(x: bodyX, y: bodyY, width: bodyWidth, height: bodyHeight)
+        let bodyPath = NSBezierPath(roundedRect: bodyRect, xRadius: cornerRadius, yRadius: cornerRadius)
+        strokeColor.setStroke()
+        bodyPath.lineWidth = 1.2
+        bodyPath.stroke()
 
-        // Background
-        let bgPath = NSBezierPath(roundedRect: NSRect(x: barX, y: barY, width: barWidth, height: barHeight), xRadius: 3, yRadius: 3)
-        backgroundColor.setFill()
-        bgPath.fill()
+        // Draw battery cap (nub)
+        let capWidth: CGFloat = 2.5
+        let capHeight: CGFloat = 5
+        let capX = bodyX + bodyWidth + 0.5
+        let capY = bodyY + (bodyHeight - capHeight) / 2
+        let capPath = NSBezierPath(roundedRect: NSRect(x: capX, y: capY, width: capWidth, height: capHeight), xRadius: 1, yRadius: 1)
+        strokeColor.setFill()
+        capPath.fill()
 
-        // Fill
-        let fillWidth = barWidth * percentage
-        if fillWidth > 2 {
-            let fillPath = NSBezierPath(roundedRect: NSRect(x: barX, y: barY, width: fillWidth, height: barHeight), xRadius: 3, yRadius: 3)
+        // Draw fill level
+        let fillPadding: CGFloat = 2
+        let fillMaxWidth = bodyWidth - fillPadding * 2
+        let fillWidth = fillMaxWidth * percentage
+        if fillWidth > 1 {
+            let fillRect = NSRect(x: bodyX + fillPadding, y: bodyY + fillPadding, width: fillWidth, height: bodyHeight - fillPadding * 2)
+            let fillPath = NSBezierPath(roundedRect: fillRect, xRadius: 1.5, yRadius: 1.5)
             fillColor.setFill()
             fillPath.fill()
         }
