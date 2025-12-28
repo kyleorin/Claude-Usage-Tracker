@@ -397,16 +397,6 @@ class DataStore: StorageProvider {
         return defaults.bool(forKey: Constants.UserDefaultsKeys.monochromeMode)
     }
 
-    /// Saves compact popover preference
-    func saveCompactPopover(_ enabled: Bool) {
-        defaults.set(enabled, forKey: Constants.UserDefaultsKeys.compactPopover)
-    }
-
-    /// Loads compact popover preference (defaults to false)
-    func loadCompactPopover() -> Bool {
-        return defaults.bool(forKey: Constants.UserDefaultsKeys.compactPopover)
-    }
-
     // MARK: - Testing Helpers
 
     /// Resets all GitHub star prompt tracking (for testing purposes)
