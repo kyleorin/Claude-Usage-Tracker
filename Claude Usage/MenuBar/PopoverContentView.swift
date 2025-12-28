@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Popover with card or compact mode
+/// Raycast-inspired liquid glass popover interface
 struct PopoverContentView: View {
     @ObservedObject var manager: MenuBarManager
     let onRefresh: () -> Void
@@ -11,29 +11,80 @@ struct PopoverContentView: View {
     @State private var lastRefreshTime = Date()
     @Environment(\.colorScheme) var colorScheme
 
-    private var isCompact: Bool {
-        DataStore.shared.loadCompactPopover()
-    }
-
     var body: some View {
         VStack(spacing: 0) {
             // Header
             PopoverHeader()
-                .padding(.horizontal, 14)
-                .padding(.top, 12)
-                .padding(.bottom, 8)
+                .padding(.horizontal, 16)
+                .padding(.top, 14)
+                .padding(.bottom, 10)
 
             // Divider
             Rectangle()
-                .fill(Color.primary.opacity(0.08))
+                .fill(Color.white.opacity(0.06))
                 .frame(height: 1)
-                .padding(.horizontal, 14)
+                .padding(.horizontal, 16)
 
-            // Content - Card or Compact mode
-            if isCompact {
-                compactContent
-            } else {
-                cardContent
+            // Content
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 10) {
+                    // Current Session
+                    MetricCard(
+                        icon: "clock.fill",
+                        iconGradient: [Color.orange, Color.orange.opacity(0.7)],
+                        title: "Current Session",
+                        percentage: manager.usage.sessionPercentage,
+                        resetTime: manager.usage.sessionResetTime,
+                        subtitle: "5-hour window"
+                    )
+
+                    // Weekly Usage
+                    MetricCard(
+                        icon: "calendar",
+                        iconGradient: [Color.purple, Color.purple.opacity(0.7)],
+                        title: "Weekly Usage",
+                        percentage: manager.usage.weeklyPercentage,
+                        resetTime: manager.usage.weeklyResetTime,
+                        subtitle: "7-day limit"
+                    )
+
+                    // Sonnet Weekly (if applicable)
+                    if manager.usage.opusWeeklyTokensUsed > 0 || manager.usage.opusWeeklyPercentage > 0 {
+                        MetricCard(
+                            icon: "sparkles",
+                            iconGradient: [Color.blue, Color.cyan],
+                            title: "Sonnet Weekly",
+                            percentage: manager.usage.opusWeeklyPercentage,
+                            resetTime: manager.usage.weeklyResetTime,
+                            subtitle: "Model limit"
+                        )
+                    }
+
+                    // Extra Usage (if applicable)
+                    if let used = manager.usage.costUsed, let limit = manager.usage.costLimit, limit > 0 {
+                        MetricCard(
+                            icon: "dollarsign.circle.fill",
+                            iconGradient: [Color.green, Color.mint],
+                            title: "Extra Usage",
+                            percentage: (used / limit) * 100.0,
+                            resetTime: nil,
+                            subtitle: String(format: "$%.2f / $%.2f", used, limit)
+                        )
+                    }
+
+                    // API Usage (if enabled)
+                    if let apiUsage = manager.apiUsage, DataStore.shared.loadAPITrackingEnabled() {
+                        MetricCard(
+                            icon: "server.rack",
+                            iconGradient: [Color.cyan, Color.teal],
+                            title: "API Credits",
+                            percentage: apiUsage.usagePercentage,
+                            resetTime: nil,
+                            subtitle: "\(apiUsage.formattedUsed) / \(apiUsage.formattedRemaining)"
+                        )
+                    }
+                }
+                .padding(12)
             }
 
             // Footer
@@ -41,12 +92,12 @@ struct PopoverContentView: View {
                 lastRefreshTime: lastRefreshTime,
                 isRefreshing: isRefreshing,
                 onRefresh: {
-                    withAnimation(.easeInOut(duration: 0.2)) {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                         isRefreshing = true
                     }
                     onRefresh()
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                        withAnimation(.easeInOut(duration: 0.2)) {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                             isRefreshing = false
                             lastRefreshTime = Date()
                         }
@@ -56,84 +107,13 @@ struct PopoverContentView: View {
                 onQuit: onQuit
             )
         }
-        .frame(width: isCompact ? 240 : 280)
-        .background(VisualEffectView(material: .popover, blendingMode: .behindWindow))
-    }
-
-    // MARK: - Card Content
-    private var cardContent: some View {
-        VStack(spacing: 8) {
-            MetricCard(
-                icon: "clock.fill",
-                iconGradient: [Color.orange, Color.orange.opacity(0.7)],
-                title: "Session",
-                percentage: manager.usage.sessionPercentage,
-                resetTime: manager.usage.sessionResetTime
-            )
-
-            MetricCard(
-                icon: "calendar",
-                iconGradient: [Color.purple, Color.purple.opacity(0.7)],
-                title: "Weekly",
-                percentage: manager.usage.weeklyPercentage,
-                resetTime: manager.usage.weeklyResetTime
-            )
-
-            if manager.usage.opusWeeklyTokensUsed > 0 || manager.usage.opusWeeklyPercentage > 0 {
-                MetricCard(
-                    icon: "sparkles",
-                    iconGradient: [Color.blue, Color.cyan],
-                    title: "Sonnet",
-                    percentage: manager.usage.opusWeeklyPercentage,
-                    resetTime: nil
-                )
+        .frame(width: 300)
+        .background(
+            ZStack {
+                VisualEffectView(material: .hudWindow, blendingMode: .behindWindow)
+                Color.black.opacity(colorScheme == .dark ? 0.3 : 0.05)
             }
-
-            if let used = manager.usage.costUsed, let limit = manager.usage.costLimit, limit > 0 {
-                MetricCard(
-                    icon: "dollarsign.circle.fill",
-                    iconGradient: [Color.green, Color.mint],
-                    title: "Extra",
-                    percentage: (used / limit) * 100.0,
-                    resetTime: nil,
-                    subtitle: String(format: "$%.2f", used)
-                )
-            }
-
-            if let apiUsage = manager.apiUsage, DataStore.shared.loadAPITrackingEnabled() {
-                MetricCard(
-                    icon: "server.rack",
-                    iconGradient: [Color.cyan, Color.teal],
-                    title: "API",
-                    percentage: apiUsage.usagePercentage,
-                    resetTime: nil,
-                    subtitle: apiUsage.formattedUsed
-                )
-            }
-        }
-        .padding(10)
-    }
-
-    // MARK: - Compact Content
-    private var compactContent: some View {
-        VStack(spacing: 6) {
-            CompactRow(title: "Session", percentage: manager.usage.sessionPercentage, resetTime: manager.usage.sessionResetTime)
-            CompactRow(title: "Weekly", percentage: manager.usage.weeklyPercentage, resetTime: manager.usage.weeklyResetTime)
-
-            if manager.usage.opusWeeklyTokensUsed > 0 || manager.usage.opusWeeklyPercentage > 0 {
-                CompactRow(title: "Sonnet", percentage: manager.usage.opusWeeklyPercentage, resetTime: nil)
-            }
-
-            if let used = manager.usage.costUsed, let limit = manager.usage.costLimit, limit > 0 {
-                CompactRow(title: "Extra", percentage: (used / limit) * 100.0, resetTime: nil, subtitle: String(format: "$%.2f", used))
-            }
-
-            if let apiUsage = manager.apiUsage, DataStore.shared.loadAPITrackingEnabled() {
-                CompactRow(title: "API", percentage: apiUsage.usagePercentage, resetTime: nil, subtitle: apiUsage.formattedUsed)
-            }
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
+        )
     }
 }
 
@@ -147,6 +127,7 @@ struct VisualEffectView: NSViewRepresentable {
         view.material = material
         view.blendingMode = blendingMode
         view.state = .active
+        view.wantsLayer = true
         return view
     }
 
@@ -158,35 +139,61 @@ struct VisualEffectView: NSViewRepresentable {
 
 // MARK: - Header
 struct PopoverHeader: View {
-    var body: some View {
-        HStack(spacing: 8) {
-            Image("HeaderLogo")
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(width: 22, height: 22)
+    @Environment(\.colorScheme) var colorScheme
 
-            Text("CCStats")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(.primary)
+    var body: some View {
+        HStack(spacing: 10) {
+            // App Icon with glow
+            ZStack {
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.purple.opacity(0.3), Color.blue.opacity(0.2)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 36, height: 36)
+                    .blur(radius: 8)
+
+                Image("HeaderLogo")
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 28, height: 28)
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("CCStats")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.primary)
+
+                HStack(spacing: 4) {
+                    Circle()
+                        .fill(Color.green)
+                        .frame(width: 5, height: 5)
+                        .shadow(color: Color.green.opacity(0.5), radius: 3)
+
+                    Text("Connected")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundColor(.secondary)
+                }
+            }
 
             Spacer()
-
-            Circle()
-                .fill(Color.green)
-                .frame(width: 6, height: 6)
         }
     }
 }
 
-// MARK: - Metric Card (Default)
+// MARK: - Metric Card
 struct MetricCard: View {
     let icon: String
     let iconGradient: [Color]
     let title: String
     let percentage: Double
-    var resetTime: Date? = nil
-    var subtitle: String? = nil
+    let resetTime: Date?
+    let subtitle: String
 
+    @State private var isHovered = false
     @Environment(\.colorScheme) var colorScheme
 
     private var statusColor: Color {
@@ -199,137 +206,111 @@ struct MetricCard: View {
     }
 
     var body: some View {
-        HStack(spacing: 10) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 5)
-                    .fill(LinearGradient(colors: iconGradient, startPoint: .topLeading, endPoint: .bottomTrailing))
-                    .frame(width: 22, height: 22)
+        VStack(alignment: .leading, spacing: 10) {
+            // Header
+            HStack(spacing: 8) {
+                // Icon with gradient background
+                ZStack {
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(
+                            LinearGradient(
+                                colors: iconGradient,
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 24, height: 24)
 
-                Image(systemName: icon)
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundColor(.white)
+                    Image(systemName: icon)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(.white)
+                }
+
+                Text(title)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(.primary.opacity(0.9))
+
+                Spacer()
+
+                // Percentage with glow
+                Text("\(Int(percentage))%")
+                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                    .foregroundColor(statusColor)
+                    .shadow(color: statusColor.opacity(0.3), radius: 4)
             }
 
-            Text(title)
-                .font(.system(size: 12, weight: .medium))
-                .foregroundColor(.primary)
-                .frame(width: 50, alignment: .leading)
-
+            // Progress bar with glow
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 2.5)
-                        .fill(Color.primary.opacity(0.1))
+                    // Track
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(Color.white.opacity(colorScheme == .dark ? 0.08 : 0.15))
 
-                    RoundedRectangle(cornerRadius: 2.5)
-                        .fill(statusColor)
+                    // Fill with gradient
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(
+                            LinearGradient(
+                                colors: [statusColor, statusColor.opacity(0.7)],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
                         .frame(width: geo.size.width * min(max(percentage / 100.0, 0), 1))
+                        .shadow(color: statusColor.opacity(0.4), radius: 4, x: 0, y: 0)
                 }
             }
             .frame(height: 5)
 
-            Text("\(Int(percentage))%")
-                .font(.system(size: 13, weight: .bold, design: .rounded))
-                .foregroundColor(statusColor)
-                .frame(width: 38, alignment: .trailing)
-
-            if let resetTime = resetTime {
-                Text(formatTime(resetTime))
-                    .font(.system(size: 9))
-                    .foregroundColor(.secondary)
-                    .frame(width: 28, alignment: .trailing)
-            } else if let subtitle = subtitle {
+            // Footer
+            HStack {
                 Text(subtitle)
-                    .font(.system(size: 9))
-                    .foregroundColor(.secondary)
-                    .frame(width: 28, alignment: .trailing)
-            } else {
-                Spacer().frame(width: 28)
-            }
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
-        .background(
-            RoundedRectangle(cornerRadius: 8)
-                .fill(Color(nsColor: .controlBackgroundColor).opacity(colorScheme == .dark ? 0.4 : 0.6))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(Color.primary.opacity(0.06), lineWidth: 0.5)
-        )
-    }
+                    .font(.system(size: 10))
+                    .foregroundColor(.secondary.opacity(0.7))
 
-    private func formatTime(_ date: Date) -> String {
-        let diff = date.timeIntervalSince(Date())
-        guard diff > 0 else { return "now" }
-        let hours = Int(diff) / 3600
-        if hours >= 24 { return "\(hours / 24)d" }
-        if hours > 0 { return "\(hours)h" }
-        return "\((Int(diff) % 3600) / 60)m"
-    }
-}
+                Spacer()
 
-// MARK: - Compact Row
-struct CompactRow: View {
-    let title: String
-    let percentage: Double
-    var resetTime: Date? = nil
-    var subtitle: String? = nil
+                if let resetTime = resetTime {
+                    HStack(spacing: 3) {
+                        Image(systemName: "arrow.counterclockwise")
+                            .font(.system(size: 8, weight: .medium))
 
-    private var statusColor: Color {
-        switch percentage {
-        case 0..<50: return Color(red: 0.34, green: 0.80, blue: 0.50)
-        case 50..<75: return Color(red: 1.0, green: 0.75, blue: 0.30)
-        case 75..<90: return Color(red: 1.0, green: 0.55, blue: 0.30)
-        default: return Color(red: 1.0, green: 0.40, blue: 0.40)
-        }
-    }
-
-    var body: some View {
-        HStack(spacing: 8) {
-            Text(title)
-                .font(.system(size: 11))
-                .foregroundColor(.secondary)
-                .frame(width: 45, alignment: .leading)
-
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 2)
-                        .fill(Color.primary.opacity(0.08))
-
-                    RoundedRectangle(cornerRadius: 2)
-                        .fill(statusColor)
-                        .frame(width: geo.size.width * min(max(percentage / 100.0, 0), 1))
+                        Text(formatResetTime(resetTime))
+                            .font(.system(size: 10, weight: .medium))
+                    }
+                    .foregroundColor(.secondary.opacity(0.6))
                 }
             }
-            .frame(height: 4)
-
-            Text("\(Int(percentage))%")
-                .font(.system(size: 11, weight: .medium, design: .rounded))
-                .foregroundColor(statusColor)
-                .frame(width: 32, alignment: .trailing)
-
-            if let resetTime = resetTime {
-                Text(formatTime(resetTime))
-                    .font(.system(size: 9))
-                    .foregroundColor(.secondary.opacity(0.6))
-                    .frame(width: 24, alignment: .trailing)
-            } else if let subtitle = subtitle {
-                Text(subtitle)
-                    .font(.system(size: 9))
-                    .foregroundColor(.secondary.opacity(0.6))
-                    .frame(width: 24, alignment: .trailing)
-            }
         }
-        .frame(height: 18)
+        .padding(12)
+        .background(
+            ZStack {
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(Color.white.opacity(colorScheme == .dark ? 0.05 : 0.5))
+
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(Color.white.opacity(colorScheme == .dark ? 0.08 : 0.2), lineWidth: 0.5)
+            }
+        )
+        .scaleEffect(isHovered ? 1.01 : 1.0)
+        .animation(.spring(response: 0.2, dampingFraction: 0.8), value: isHovered)
+        .onHover { isHovered = $0 }
     }
 
-    private func formatTime(_ date: Date) -> String {
+    private func formatResetTime(_ date: Date) -> String {
         let diff = date.timeIntervalSince(Date())
         guard diff > 0 else { return "now" }
+
         let hours = Int(diff) / 3600
-        if hours >= 24 { return "\(hours / 24)d" }
-        if hours > 0 { return "\(hours)h" }
-        return "\((Int(diff) % 3600) / 60)m"
+        let minutes = (Int(diff) % 3600) / 60
+
+        if hours >= 24 {
+            let days = hours / 24
+            return "\(days)d \(hours % 24)h"
+        } else if hours > 0 {
+            return "\(hours)h \(minutes)m"
+        } else {
+            return "\(minutes)m"
+        }
     }
 }
 
@@ -344,6 +325,7 @@ struct PopoverFooter: View {
     @State private var refreshHovered = false
     @State private var settingsHovered = false
     @State private var quitHovered = false
+    @Environment(\.colorScheme) var colorScheme
 
     private var refreshText: String {
         let seconds = Int(-lastRefreshTime.timeIntervalSinceNow)
@@ -353,62 +335,100 @@ struct PopoverFooter: View {
     }
 
     var body: some View {
-        HStack(spacing: 4) {
-            Button(action: onRefresh) {
-                HStack(spacing: 3) {
-                    if isRefreshing {
-                        ProgressView()
-                            .scaleEffect(0.4)
-                            .frame(width: 10, height: 10)
-                    } else {
-                        Image(systemName: "arrow.clockwise")
-                            .font(.system(size: 9, weight: .medium))
-                    }
-                    Text(refreshText)
-                        .font(.system(size: 10))
-                }
-                .foregroundColor(.secondary)
-                .padding(.horizontal, 6)
-                .padding(.vertical, 4)
-                .background(
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(refreshHovered ? Color.primary.opacity(0.08) : Color.clear)
-                )
-            }
-            .buttonStyle(.plain)
+        HStack(spacing: 6) {
+            // Refresh
+            FooterButton(
+                icon: "arrow.clockwise",
+                label: refreshText,
+                isLoading: isRefreshing,
+                isHovered: refreshHovered,
+                action: onRefresh
+            )
             .onHover { refreshHovered = $0 }
             .disabled(isRefreshing)
 
             Spacer()
 
-            Button(action: onSettings) {
-                Image(systemName: "gearshape")
-                    .font(.system(size: 11))
-                    .foregroundColor(.secondary)
-                    .frame(width: 24, height: 24)
-                    .background(
-                        RoundedRectangle(cornerRadius: 4)
-                            .fill(settingsHovered ? Color.primary.opacity(0.08) : Color.clear)
-                    )
-            }
-            .buttonStyle(.plain)
+            // Settings
+            FooterIconButton(
+                icon: "gearshape.fill",
+                isHovered: settingsHovered,
+                action: onSettings
+            )
             .onHover { settingsHovered = $0 }
 
-            Button(action: onQuit) {
-                Image(systemName: "power")
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundColor(.secondary)
-                    .frame(width: 24, height: 24)
-                    .background(
-                        RoundedRectangle(cornerRadius: 4)
-                            .fill(quitHovered ? Color.red.opacity(0.1) : Color.clear)
-                    )
-            }
-            .buttonStyle(.plain)
+            // Quit
+            FooterIconButton(
+                icon: "power",
+                isHovered: quitHovered,
+                hoverColor: Color.red.opacity(0.15),
+                action: onQuit
+            )
             .onHover { quitHovered = $0 }
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
-        .background(Color.primary.opacity(0.03))
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(Color.black.opacity(colorScheme == .dark ? 0.2 : 0.03))
+    }
+}
+
+// MARK: - Footer Button
+struct FooterButton: View {
+    let icon: String
+    let label: String
+    var isLoading: Bool = false
+    let isHovered: Bool
+    let action: () -> Void
+
+    @Environment(\.colorScheme) var colorScheme
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 4) {
+                if isLoading {
+                    ProgressView()
+                        .scaleEffect(0.45)
+                        .frame(width: 10, height: 10)
+                } else {
+                    Image(systemName: icon)
+                        .font(.system(size: 9, weight: .semibold))
+                }
+
+                Text(label)
+                    .font(.system(size: 10, weight: .medium))
+            }
+            .foregroundColor(.secondary.opacity(0.8))
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
+            .background(
+                RoundedRectangle(cornerRadius: 5)
+                    .fill(Color.white.opacity(isHovered ? (colorScheme == .dark ? 0.1 : 0.6) : (colorScheme == .dark ? 0.05 : 0.3)))
+            )
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Footer Icon Button
+struct FooterIconButton: View {
+    let icon: String
+    let isHovered: Bool
+    var hoverColor: Color = Color.white.opacity(0.1)
+    let action: () -> Void
+
+    @Environment(\.colorScheme) var colorScheme
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundColor(.secondary.opacity(0.7))
+                .frame(width: 26, height: 26)
+                .background(
+                    RoundedRectangle(cornerRadius: 5)
+                        .fill(isHovered ? hoverColor : Color.clear)
+                )
+        }
+        .buttonStyle(.plain)
     }
 }
