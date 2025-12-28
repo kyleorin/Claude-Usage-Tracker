@@ -102,14 +102,4 @@ extension MenuBarIconStyle {
         case .compact: return "circle.fill"
         }
     }
-
-    var displayName: String {
-        switch self {
-        case .battery: return "Battery"
-        case .progressBar: return "Progress"
-        case .percentageOnly: return "Percent"
-        case .icon: return "Ring"
-        case .compact: return "Compact"
-        }
-    }
 }
