@@ -43,6 +43,26 @@ enum SettingsColors {
     static let error = Color(red: 1.0, green: 0.40, blue: 0.40)
     static let info = Color(red: 0.40, green: 0.60, blue: 0.95)
 
+    // MARK: - UI Elements
+    static let primary = Color.accentColor
+    static let cardBackground = Color(nsColor: .controlBackgroundColor)
+    static let inputBackground = Color(nsColor: .textBackgroundColor)
+    static let border = Color.primary.opacity(0.1)
+
+    // MARK: - Badges
+    static let betaBadge = Color.orange
+    static let proBadge = Color.purple
+    static let newBadge = Color.blue
+
+    // MARK: - Helper Functions
+    static func lightOverlay(_ color: Color, opacity: Double) -> Color {
+        color.opacity(opacity)
+    }
+
+    static func borderColor(_ color: Color, opacity: Double) -> Color {
+        color.opacity(opacity)
+    }
+
     // MARK: - Gradient Presets
     static func gradient(_ base: Color, dark: Color) -> LinearGradient {
         LinearGradient(
