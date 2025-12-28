@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Clean, modern popover interface matching CUStats design
+/// Clean, modern popover interface
 struct PopoverContentView: View {
     @ObservedObject var manager: MenuBarManager
     let onRefresh: () -> Void
@@ -13,42 +13,46 @@ struct PopoverContentView: View {
     var body: some View {
         VStack(spacing: 0) {
             // Header
-            AppHeader()
+            HeaderView()
+
+            Divider()
+                .padding(.horizontal, 16)
 
             // Content
-            VStack(spacing: 16) {
-                // Current Session Section
-                UsageSection(
-                    icon: "clock.fill",
-                    iconColor: Color(red: 0.95, green: 0.3, blue: 0.3),
-                    title: "CURRENT SESSION",
-                    items: [
-                        UsageItem(
-                            title: "5-Hour Usage",
-                            percentage: manager.usage.sessionPercentage,
-                            resetTime: manager.usage.sessionResetTime
-                        )
-                    ]
-                )
+            ScrollView {
+                VStack(spacing: 12) {
+                    // Current Session Card
+                    UsageCard(
+                        icon: "clock.fill",
+                        iconColor: Color(red: 0.92, green: 0.34, blue: 0.34),
+                        title: "CURRENT SESSION",
+                        items: [
+                            UsageItemData(
+                                title: "5-Hour Usage",
+                                percentage: manager.usage.sessionPercentage,
+                                resetTime: manager.usage.sessionResetTime
+                            )
+                        ]
+                    )
 
-                // Weekly Limits Section
-                UsageSection(
-                    icon: "calendar",
-                    iconColor: Color(red: 0.6, green: 0.4, blue: 0.8),
-                    title: "WEEKLY LIMITS",
-                    items: buildWeeklyItems()
-                )
+                    // Weekly Limits Card
+                    UsageCard(
+                        icon: "calendar",
+                        iconColor: Color(red: 0.55, green: 0.36, blue: 0.76),
+                        title: "WEEKLY LIMITS",
+                        items: buildWeeklyItems()
+                    )
 
-                // API Usage Section (if enabled)
-                if let apiUsage = manager.apiUsage, DataStore.shared.loadAPITrackingEnabled() {
-                    APISection(apiUsage: apiUsage)
+                    // API Usage Card (if enabled)
+                    if let apiUsage = manager.apiUsage, DataStore.shared.loadAPITrackingEnabled() {
+                        APIUsageCard(apiUsage: apiUsage)
+                    }
                 }
+                .padding(16)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 16)
 
             // Footer
-            FooterView(
+            FooterBar(
                 lastRefreshTime: lastRefreshTime,
                 isRefreshing: isRefreshing,
                 onRefresh: {
@@ -67,34 +71,31 @@ struct PopoverContentView: View {
                 onQuit: onQuit
             )
         }
-        .frame(width: 320)
+        .frame(width: 340)
         .background(Color(nsColor: .windowBackgroundColor))
     }
 
-    private func buildWeeklyItems() -> [UsageItem] {
-        var items: [UsageItem] = [
-            UsageItem(
+    private func buildWeeklyItems() -> [UsageItemData] {
+        var items: [UsageItemData] = [
+            UsageItemData(
                 title: "7-Day Usage",
                 percentage: manager.usage.weeklyPercentage,
                 resetTime: manager.usage.weeklyResetTime
             )
         ]
 
-        // Add Opus/Sonnet if available
         if manager.usage.opusWeeklyTokensUsed > 0 || manager.usage.opusWeeklyPercentage > 0 {
-            items.append(UsageItem(
+            items.append(UsageItemData(
                 title: "Sonnet (7-Day)",
                 percentage: manager.usage.opusWeeklyPercentage,
-                resetTime: manager.usage.weeklyResetTime.addingTimeInterval(2 * 24 * 3600) // Example offset
+                resetTime: manager.usage.weeklyResetTime
             ))
         }
 
-        // Add Extra Usage if applicable
         if let used = manager.usage.costUsed, let limit = manager.usage.costLimit, limit > 0 {
-            let percentage = (used / limit) * 100.0
-            items.append(UsageItem(
+            items.append(UsageItemData(
                 title: "Extra Usage",
-                percentage: percentage,
+                percentage: (used / limit) * 100.0,
                 resetTime: nil
             ))
         }
@@ -103,117 +104,114 @@ struct PopoverContentView: View {
     }
 }
 
-// MARK: - App Header
-struct AppHeader: View {
+// MARK: - Header
+struct HeaderView: View {
     var body: some View {
         HStack(spacing: 12) {
             // App Icon
-            Image("HeaderLogo")
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(width: 36, height: 36)
-                .background(
-                    Circle()
-                        .fill(Color(nsColor: .controlBackgroundColor))
-                )
+            ZStack {
+                Circle()
+                    .fill(Color(nsColor: .controlBackgroundColor))
+                    .frame(width: 42, height: 42)
 
-            VStack(alignment: .leading, spacing: 2) {
+                Image("HeaderLogo")
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 28, height: 28)
+            }
+
+            VStack(alignment: .leading, spacing: 3) {
                 Text("ClaudeUsage")
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(size: 17, weight: .semibold))
                     .foregroundColor(.primary)
 
                 HStack(spacing: 6) {
                     Circle()
-                        .fill(Color.green)
+                        .fill(Color(red: 0.28, green: 0.75, blue: 0.42))
                         .frame(width: 8, height: 8)
 
                     Text("Account Session")
                         .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(Color.green)
+                        .foregroundColor(Color(red: 0.28, green: 0.75, blue: 0.42))
                 }
             }
 
             Spacer()
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
+        .padding(.horizontal, 18)
+        .padding(.vertical, 16)
     }
 }
 
-// MARK: - Usage Section
-struct UsageSection: View {
+// MARK: - Usage Card
+struct UsageCard: View {
     let icon: String
     let iconColor: Color
     let title: String
-    let items: [UsageItem]
+    let items: [UsageItemData]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 14) {
             // Section Header
             HStack(spacing: 8) {
                 Image(systemName: icon)
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: 11, weight: .bold))
                     .foregroundColor(iconColor)
 
                 Text(title)
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundColor(.primary)
-                    .tracking(0.5)
+                    .font(.system(size: 11, weight: .bold, design: .default))
+                    .foregroundColor(.secondary)
+                    .tracking(0.8)
             }
 
-            // Usage Items
-            VStack(spacing: 14) {
-                ForEach(items, id: \.title) { item in
-                    UsageRowView(item: item)
+            // Items
+            VStack(spacing: 16) {
+                ForEach(items) { item in
+                    UsageRow(item: item)
                 }
             }
         }
         .padding(16)
         .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color(nsColor: .controlBackgroundColor).opacity(0.5))
+            RoundedRectangle(cornerRadius: 14)
+                .fill(Color(nsColor: .controlBackgroundColor).opacity(0.6))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(Color.primary.opacity(0.04), lineWidth: 1)
         )
     }
 }
 
-// MARK: - Usage Item Model
-struct UsageItem: Identifiable {
+// MARK: - Usage Item Data
+struct UsageItemData: Identifiable {
     let id = UUID()
     let title: String
     let percentage: Double
     let resetTime: Date?
 
-    var statusText: String {
+    var status: (text: String, color: Color) {
         switch percentage {
-        case 0..<50: return "Good"
-        case 50..<75: return "Moderate"
-        case 75..<90: return "High"
-        default: return "Critical"
+        case 0..<50:
+            return ("Good", Color(red: 0.28, green: 0.75, blue: 0.42))
+        case 50..<75:
+            return ("Moderate", Color(red: 0.95, green: 0.68, blue: 0.25))
+        case 75..<90:
+            return ("High", Color(red: 0.95, green: 0.50, blue: 0.25))
+        default:
+            return ("Critical", Color(red: 0.92, green: 0.34, blue: 0.34))
         }
-    }
-
-    var statusColor: Color {
-        switch percentage {
-        case 0..<50: return Color(red: 0.2, green: 0.78, blue: 0.35)  // Green
-        case 50..<75: return Color(red: 1.0, green: 0.75, blue: 0.0)  // Yellow/Orange
-        case 75..<90: return Color(red: 1.0, green: 0.5, blue: 0.0)   // Orange
-        default: return Color(red: 0.95, green: 0.35, blue: 0.35)     // Coral Red
-        }
-    }
-
-    var progressColor: Color {
-        statusColor
     }
 }
 
-// MARK: - Usage Row View
-struct UsageRowView: View {
-    let item: UsageItem
+// MARK: - Usage Row
+struct UsageRow: View {
+    let item: UsageItemData
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            // Title Row
-            HStack {
+        VStack(alignment: .leading, spacing: 10) {
+            // Title + Badge + Percentage
+            HStack(alignment: .center) {
                 Text(item.title)
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(.primary)
@@ -221,255 +219,55 @@ struct UsageRowView: View {
                 Spacer()
 
                 // Status Badge
-                Text(item.statusText)
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundColor(item.statusColor)
+                Text(item.status.text)
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundColor(item.status.color)
                     .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
+                    .padding(.vertical, 5)
                     .background(
                         RoundedRectangle(cornerRadius: 6)
-                            .fill(item.statusColor.opacity(0.12))
+                            .fill(item.status.color.opacity(0.12))
                     )
 
                 // Percentage
                 Text("\(Int(item.percentage))%")
-                    .font(.system(size: 16, weight: .bold))
-                    .foregroundColor(item.statusColor)
-                    .frame(width: 50, alignment: .trailing)
+                    .font(.system(size: 17, weight: .bold, design: .rounded))
+                    .foregroundColor(item.status.color)
+                    .frame(minWidth: 48, alignment: .trailing)
             }
 
             // Progress Bar
-            GeometryReader { geometry in
+            GeometryReader { geo in
                 ZStack(alignment: .leading) {
-                    // Background
                     RoundedRectangle(cornerRadius: 3)
-                        .fill(Color.gray.opacity(0.15))
+                        .fill(Color.gray.opacity(0.12))
+                        .frame(height: 6)
 
-                    // Fill
                     RoundedRectangle(cornerRadius: 3)
-                        .fill(item.progressColor)
-                        .frame(width: geometry.size.width * min(item.percentage / 100.0, 1.0))
+                        .fill(item.status.color)
+                        .frame(width: geo.size.width * min(max(item.percentage / 100.0, 0), 1), height: 6)
                 }
             }
             .frame(height: 6)
 
             // Reset Time
             if let resetTime = item.resetTime {
-                HStack(spacing: 4) {
+                HStack(spacing: 5) {
                     Image(systemName: "arrow.counterclockwise")
                         .font(.system(size: 10, weight: .medium))
-                        .foregroundColor(.secondary)
-
-                    Text("Resets in \(resetTime.shortResetString())")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(.secondary)
-                }
-            }
-        }
-    }
-}
-
-// MARK: - API Section
-struct APISection: View {
-    let apiUsage: APIUsage
-
-    private var statusColor: Color {
-        switch apiUsage.usagePercentage {
-        case 0..<50: return Color(red: 0.2, green: 0.78, blue: 0.35)
-        case 50..<75: return Color(red: 1.0, green: 0.75, blue: 0.0)
-        case 75..<90: return Color(red: 1.0, green: 0.5, blue: 0.0)
-        default: return Color(red: 0.95, green: 0.35, blue: 0.35)
-        }
-    }
-
-    private var statusText: String {
-        switch apiUsage.usagePercentage {
-        case 0..<50: return "Good"
-        case 50..<75: return "Moderate"
-        case 75..<90: return "High"
-        default: return "Critical"
-        }
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            // Section Header
-            HStack(spacing: 8) {
-                Image(systemName: "server.rack")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(Color(red: 0.3, green: 0.6, blue: 0.9))
-
-                Text("API USAGE")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundColor(.primary)
-                    .tracking(0.5)
-            }
-
-            // API Usage Row
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Text("API Credits")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(.primary)
-
-                    Spacer()
-
-                    Text(statusText)
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(statusColor)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 4)
-                        .background(
-                            RoundedRectangle(cornerRadius: 6)
-                                .fill(statusColor.opacity(0.12))
-                        )
-
-                    Text("\(Int(apiUsage.usagePercentage))%")
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundColor(statusColor)
-                        .frame(width: 50, alignment: .trailing)
-                }
-
-                // Progress Bar
-                GeometryReader { geometry in
-                    ZStack(alignment: .leading) {
-                        RoundedRectangle(cornerRadius: 3)
-                            .fill(Color.gray.opacity(0.15))
-
-                        RoundedRectangle(cornerRadius: 3)
-                            .fill(statusColor)
-                            .frame(width: geometry.size.width * min(apiUsage.usagePercentage / 100.0, 1.0))
-                    }
-                }
-                .frame(height: 6)
-
-                // Credits info
-                HStack {
-                    Text(apiUsage.formattedUsed)
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(.secondary)
-
-                    Text("of")
-                        .font(.system(size: 11, weight: .medium))
                         .foregroundColor(.secondary.opacity(0.7))
 
-                    Text(apiUsage.formattedRemaining)
+                    Text("Resets in \(formatResetTime(resetTime))")
                         .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.secondary.opacity(0.7))
                 }
             }
-        }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color(nsColor: .controlBackgroundColor).opacity(0.5))
-        )
-    }
-}
-
-// MARK: - Footer View
-struct FooterView: View {
-    let lastRefreshTime: Date
-    let isRefreshing: Bool
-    let onRefresh: () -> Void
-    let onDashboard: () -> Void
-    let onQuit: () -> Void
-
-    private var refreshText: String {
-        let seconds = Int(-lastRefreshTime.timeIntervalSinceNow)
-        if seconds < 5 {
-            return "just now"
-        } else if seconds < 60 {
-            return "\(seconds)s ago"
-        } else {
-            let minutes = seconds / 60
-            return "\(minutes)m ago"
         }
     }
 
-    var body: some View {
-        HStack(spacing: 10) {
-            // Refresh Button
-            Button(action: onRefresh) {
-                HStack(spacing: 6) {
-                    if isRefreshing {
-                        ProgressView()
-                            .scaleEffect(0.6)
-                            .frame(width: 14, height: 14)
-                    } else {
-                        Image(systemName: "arrow.clockwise")
-                            .font(.system(size: 12, weight: .medium))
-                    }
-
-                    Text(refreshText)
-                        .font(.system(size: 12, weight: .medium))
-                }
-                .foregroundColor(Color(red: 0.2, green: 0.78, blue: 0.35))
-                .padding(.horizontal, 14)
-                .padding(.vertical, 8)
-                .background(
-                    RoundedRectangle(cornerRadius: 8)
-                        .stroke(Color(red: 0.2, green: 0.78, blue: 0.35), lineWidth: 1.5)
-                )
-            }
-            .buttonStyle(.plain)
-            .disabled(isRefreshing)
-
-            Spacer()
-
-            // Dashboard Button
-            Button(action: onDashboard) {
-                HStack(spacing: 6) {
-                    Image(systemName: "square.grid.2x2")
-                        .font(.system(size: 12, weight: .medium))
-
-                    Text("Dashboard")
-                        .font(.system(size: 12, weight: .medium))
-                }
-                .foregroundColor(.primary)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 8)
-                .background(
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(Color(nsColor: .controlBackgroundColor))
-                )
-            }
-            .buttonStyle(.plain)
-
-            // Quit Button
-            Button(action: onQuit) {
-                HStack(spacing: 6) {
-                    Image(systemName: "power")
-                        .font(.system(size: 12, weight: .medium))
-
-                    Text("Quit")
-                        .font(.system(size: 12, weight: .medium))
-                }
-                .foregroundColor(.primary)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 8)
-                .background(
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(Color(nsColor: .controlBackgroundColor))
-                )
-            }
-            .buttonStyle(.plain)
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(Color(nsColor: .windowBackgroundColor))
-    }
-}
-
-// MARK: - Date Extension for Short Reset String
-extension Date {
-    func shortResetString() -> String {
-        let now = Date()
-        let diff = self.timeIntervalSince(now)
-
-        if diff <= 0 {
-            return "now"
-        }
+    private func formatResetTime(_ date: Date) -> String {
+        let diff = date.timeIntervalSince(Date())
+        guard diff > 0 else { return "now" }
 
         let hours = Int(diff) / 3600
         let minutes = (Int(diff) % 3600) / 60
@@ -483,5 +281,213 @@ extension Date {
         } else {
             return "\(minutes)m"
         }
+    }
+}
+
+// MARK: - API Usage Card
+struct APIUsageCard: View {
+    let apiUsage: APIUsage
+
+    private var status: (text: String, color: Color) {
+        switch apiUsage.usagePercentage {
+        case 0..<50:
+            return ("Good", Color(red: 0.28, green: 0.75, blue: 0.42))
+        case 50..<75:
+            return ("Moderate", Color(red: 0.95, green: 0.68, blue: 0.25))
+        case 75..<90:
+            return ("High", Color(red: 0.95, green: 0.50, blue: 0.25))
+        default:
+            return ("Critical", Color(red: 0.92, green: 0.34, blue: 0.34))
+        }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            // Header
+            HStack(spacing: 8) {
+                Image(systemName: "server.rack")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundColor(Color(red: 0.35, green: 0.55, blue: 0.85))
+
+                Text("API USAGE")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundColor(.secondary)
+                    .tracking(0.8)
+            }
+
+            // Content
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(alignment: .center) {
+                    Text("API Credits")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.primary)
+
+                    Spacer()
+
+                    Text(status.text)
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundColor(status.color)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(
+                            RoundedRectangle(cornerRadius: 6)
+                                .fill(status.color.opacity(0.12))
+                        )
+
+                    Text("\(Int(apiUsage.usagePercentage))%")
+                        .font(.system(size: 17, weight: .bold, design: .rounded))
+                        .foregroundColor(status.color)
+                        .frame(minWidth: 48, alignment: .trailing)
+                }
+
+                // Progress Bar
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        RoundedRectangle(cornerRadius: 3)
+                            .fill(Color.gray.opacity(0.12))
+                            .frame(height: 6)
+
+                        RoundedRectangle(cornerRadius: 3)
+                            .fill(status.color)
+                            .frame(width: geo.size.width * min(apiUsage.usagePercentage / 100.0, 1), height: 6)
+                    }
+                }
+                .frame(height: 6)
+
+                // Credits Info
+                HStack(spacing: 4) {
+                    Text(apiUsage.formattedUsed)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(.secondary)
+
+                    Text("of")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary.opacity(0.6))
+
+                    Text(apiUsage.formattedRemaining)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(.secondary)
+
+                    Text("remaining")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary.opacity(0.6))
+                }
+            }
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(Color(nsColor: .controlBackgroundColor).opacity(0.6))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(Color.primary.opacity(0.04), lineWidth: 1)
+        )
+    }
+}
+
+// MARK: - Footer Bar
+struct FooterBar: View {
+    let lastRefreshTime: Date
+    let isRefreshing: Bool
+    let onRefresh: () -> Void
+    let onDashboard: () -> Void
+    let onQuit: () -> Void
+
+    @State private var refreshHovered = false
+    @State private var dashboardHovered = false
+    @State private var quitHovered = false
+
+    private var refreshText: String {
+        let seconds = Int(-lastRefreshTime.timeIntervalSinceNow)
+        if seconds < 5 { return "just now" }
+        if seconds < 60 { return "\(seconds)s ago" }
+        return "\(seconds / 60)m ago"
+    }
+
+    private let accentGreen = Color(red: 0.28, green: 0.75, blue: 0.42)
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Divider()
+
+            HStack(spacing: 8) {
+                // Refresh Button (outlined)
+                Button(action: onRefresh) {
+                    HStack(spacing: 6) {
+                        if isRefreshing {
+                            ProgressView()
+                                .scaleEffect(0.55)
+                                .frame(width: 14, height: 14)
+                        } else {
+                            Image(systemName: "arrow.clockwise")
+                                .font(.system(size: 11, weight: .semibold))
+                        }
+
+                        Text(refreshText)
+                            .font(.system(size: 12, weight: .medium))
+                    }
+                    .foregroundColor(accentGreen)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 9)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(accentGreen, lineWidth: 1.5)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(refreshHovered ? accentGreen.opacity(0.08) : Color.clear)
+                            )
+                    )
+                }
+                .buttonStyle(.plain)
+                .disabled(isRefreshing)
+                .onHover { refreshHovered = $0 }
+
+                Spacer()
+
+                // Dashboard Button
+                Button(action: onDashboard) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "square.grid.2x2")
+                            .font(.system(size: 11, weight: .medium))
+
+                        Text("Dashboard")
+                            .font(.system(size: 12, weight: .medium))
+                    }
+                    .foregroundColor(.primary.opacity(0.8))
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 9)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(dashboardHovered ? Color.primary.opacity(0.06) : Color(nsColor: .controlBackgroundColor).opacity(0.8))
+                    )
+                }
+                .buttonStyle(.plain)
+                .onHover { dashboardHovered = $0 }
+
+                // Quit Button
+                Button(action: onQuit) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "power")
+                            .font(.system(size: 11, weight: .medium))
+
+                        Text("Quit")
+                            .font(.system(size: 12, weight: .medium))
+                    }
+                    .foregroundColor(.primary.opacity(0.8))
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 9)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(quitHovered ? Color.primary.opacity(0.06) : Color(nsColor: .controlBackgroundColor).opacity(0.8))
+                    )
+                }
+                .buttonStyle(.plain)
+                .onHover { quitHovered = $0 }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+        }
+        .background(Color(nsColor: .windowBackgroundColor))
     }
 }

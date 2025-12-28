@@ -29,24 +29,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         // Initialize menu bar
         menuBarManager = MenuBarManager()
         menuBarManager?.setup()
-
-        // Track first launch date for GitHub star prompt
-        if DataStore.shared.loadFirstLaunchDate() == nil {
-            DataStore.shared.saveFirstLaunchDate(Date())
-        }
-
-        // TESTING: Check for launch argument to force GitHub star prompt
-        if CommandLine.arguments.contains("--show-github-prompt") {
-            DataStore.shared.resetGitHubStarPromptForTesting()
-            DataStore.shared.saveFirstLaunchDate(Date().addingTimeInterval(-2 * 24 * 60 * 60))
-        }
-
-        // Check if we should show GitHub star prompt (with a slight delay to not interrupt app startup)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
-            if DataStore.shared.shouldShowGitHubStarPrompt() {
-                self?.menuBarManager?.showGitHubStarPrompt()
-            }
-        }
     }
 
     private func requestNotificationPermissions() {
@@ -65,7 +47,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         let hostingController = NSHostingController(rootView: setupView)
 
         let window = NSWindow(contentViewController: hostingController)
-        window.title = "Claude Usage Tracker Setup"
+        window.title = "ClaudeUsage Setup"
         window.styleMask = [.titled, .closable, .fullSizeContentView]
         window.center()
         window.isReleasedWhenClosed = false
@@ -86,12 +68,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     }
 
     func applicationWillTerminate(_ notification: Notification) {
-        // Cleanup
         menuBarManager?.cleanup()
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
-        // Keep running even if all windows are closed
         return false
     }
 
@@ -100,7 +80,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     }
 
     func applicationSupportsSecureRestorableState(_ app: NSApplication) -> Bool {
-        // Disable state restoration for menu bar app
         return false
     }
 
@@ -111,7 +90,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         willPresent notification: UNNotification,
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
-        // Show notifications even when app is in foreground (menu bar apps are always foreground)
         completionHandler([.banner, .sound])
     }
 }
