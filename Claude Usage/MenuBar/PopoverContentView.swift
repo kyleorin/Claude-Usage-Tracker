@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Compact Raycast-inspired popover
+/// Raycast-inspired liquid glass popover
 struct PopoverContentView: View {
     @ObservedObject var manager: MenuBarManager
     let onRefresh: () -> Void
@@ -25,17 +25,21 @@ struct PopoverContentView: View {
                 .frame(height: 1)
                 .padding(.horizontal, 14)
 
-            // Content - no scroll, compact
+            // Content
             VStack(spacing: 8) {
-                // Current Session - always show
-                MetricRow(
+                // Current Session
+                MetricCard(
+                    icon: "clock.fill",
+                    iconGradient: [Color.orange, Color.orange.opacity(0.7)],
                     title: "Session",
                     percentage: manager.usage.sessionPercentage,
                     resetTime: manager.usage.sessionResetTime
                 )
 
-                // Weekly Usage - always show
-                MetricRow(
+                // Weekly Usage
+                MetricCard(
+                    icon: "calendar",
+                    iconGradient: [Color.purple, Color.purple.opacity(0.7)],
                     title: "Weekly",
                     percentage: manager.usage.weeklyPercentage,
                     resetTime: manager.usage.weeklyResetTime
@@ -43,7 +47,9 @@ struct PopoverContentView: View {
 
                 // Sonnet Weekly (if applicable)
                 if manager.usage.opusWeeklyTokensUsed > 0 || manager.usage.opusWeeklyPercentage > 0 {
-                    MetricRow(
+                    MetricCard(
+                        icon: "sparkles",
+                        iconGradient: [Color.blue, Color.cyan],
                         title: "Sonnet",
                         percentage: manager.usage.opusWeeklyPercentage,
                         resetTime: nil
@@ -52,7 +58,9 @@ struct PopoverContentView: View {
 
                 // Extra Usage (if applicable)
                 if let used = manager.usage.costUsed, let limit = manager.usage.costLimit, limit > 0 {
-                    MetricRow(
+                    MetricCard(
+                        icon: "dollarsign.circle.fill",
+                        iconGradient: [Color.green, Color.mint],
                         title: "Extra",
                         percentage: (used / limit) * 100.0,
                         resetTime: nil,
@@ -62,7 +70,9 @@ struct PopoverContentView: View {
 
                 // API Usage (if enabled)
                 if let apiUsage = manager.apiUsage, DataStore.shared.loadAPITrackingEnabled() {
-                    MetricRow(
+                    MetricCard(
+                        icon: "server.rack",
+                        iconGradient: [Color.cyan, Color.teal],
                         title: "API",
                         percentage: apiUsage.usagePercentage,
                         resetTime: nil,
@@ -70,8 +80,7 @@ struct PopoverContentView: View {
                     )
                 }
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
+            .padding(10)
 
             // Footer
             PopoverFooter(
@@ -93,12 +102,8 @@ struct PopoverContentView: View {
                 onQuit: onQuit
             )
         }
-        .frame(width: 260)
-        .background(
-            ZStack {
-                VisualEffectView(material: .popover, blendingMode: .behindWindow)
-            }
-        )
+        .frame(width: 280)
+        .background(VisualEffectView(material: .popover, blendingMode: .behindWindow))
     }
 }
 
@@ -136,7 +141,6 @@ struct PopoverHeader: View {
 
             Spacer()
 
-            // Status dot
             Circle()
                 .fill(Color.green)
                 .frame(width: 6, height: 6)
@@ -144,8 +148,10 @@ struct PopoverHeader: View {
     }
 }
 
-// MARK: - Metric Row (Compact)
-struct MetricRow: View {
+// MARK: - Metric Card
+struct MetricCard: View {
+    let icon: String
+    let iconGradient: [Color]
     let title: String
     let percentage: Double
     var resetTime: Date? = nil
@@ -164,61 +170,76 @@ struct MetricRow: View {
 
     var body: some View {
         HStack(spacing: 10) {
+            // Icon badge
+            ZStack {
+                RoundedRectangle(cornerRadius: 5)
+                    .fill(LinearGradient(colors: iconGradient, startPoint: .topLeading, endPoint: .bottomTrailing))
+                    .frame(width: 22, height: 22)
+
+                Image(systemName: icon)
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundColor(.white)
+            }
+
             // Title
             Text(title)
-                .font(.system(size: 12))
-                .foregroundColor(.secondary)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundColor(.primary)
                 .frame(width: 50, alignment: .leading)
 
             // Progress bar
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 2)
-                        .fill(Color.primary.opacity(0.08))
+                    RoundedRectangle(cornerRadius: 2.5)
+                        .fill(Color.primary.opacity(0.1))
 
-                    RoundedRectangle(cornerRadius: 2)
+                    RoundedRectangle(cornerRadius: 2.5)
                         .fill(statusColor)
                         .frame(width: geo.size.width * min(max(percentage / 100.0, 0), 1))
                 }
             }
-            .frame(height: 4)
+            .frame(height: 5)
 
             // Percentage
             Text("\(Int(percentage))%")
-                .font(.system(size: 12, weight: .medium, design: .rounded))
+                .font(.system(size: 13, weight: .bold, design: .rounded))
                 .foregroundColor(statusColor)
-                .frame(width: 36, alignment: .trailing)
+                .frame(width: 38, alignment: .trailing)
 
             // Reset time or subtitle
             if let resetTime = resetTime {
                 Text(formatResetTime(resetTime))
-                    .font(.system(size: 10))
-                    .foregroundColor(.secondary.opacity(0.6))
-                    .frame(width: 40, alignment: .trailing)
+                    .font(.system(size: 9))
+                    .foregroundColor(.secondary)
+                    .frame(width: 28, alignment: .trailing)
             } else if let subtitle = subtitle {
                 Text(subtitle)
-                    .font(.system(size: 10))
-                    .foregroundColor(.secondary.opacity(0.6))
-                    .frame(width: 40, alignment: .trailing)
+                    .font(.system(size: 9))
+                    .foregroundColor(.secondary)
+                    .frame(width: 28, alignment: .trailing)
+            } else {
+                Spacer().frame(width: 28)
             }
         }
-        .frame(height: 20)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color(nsColor: .controlBackgroundColor).opacity(colorScheme == .dark ? 0.4 : 0.6))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color.primary.opacity(0.06), lineWidth: 0.5)
+        )
     }
 
     private func formatResetTime(_ date: Date) -> String {
         let diff = date.timeIntervalSince(Date())
         guard diff > 0 else { return "now" }
-
         let hours = Int(diff) / 3600
-        let minutes = (Int(diff) % 3600) / 60
-
-        if hours >= 24 {
-            return "\(hours / 24)d"
-        } else if hours > 0 {
-            return "\(hours)h"
-        } else {
-            return "\(minutes)m"
-        }
+        if hours >= 24 { return "\(hours / 24)d" }
+        if hours > 0 { return "\(hours)h" }
+        return "\((Int(diff) % 3600) / 60)m"
     }
 }
 
@@ -243,7 +264,6 @@ struct PopoverFooter: View {
 
     var body: some View {
         HStack(spacing: 4) {
-            // Refresh
             Button(action: onRefresh) {
                 HStack(spacing: 3) {
                     if isRefreshing {
@@ -271,7 +291,6 @@ struct PopoverFooter: View {
 
             Spacer()
 
-            // Settings
             Button(action: onSettings) {
                 Image(systemName: "gearshape")
                     .font(.system(size: 11))
@@ -285,7 +304,6 @@ struct PopoverFooter: View {
             .buttonStyle(.plain)
             .onHover { settingsHovered = $0 }
 
-            // Quit
             Button(action: onQuit) {
                 Image(systemName: "power")
                     .font(.system(size: 10, weight: .medium))
