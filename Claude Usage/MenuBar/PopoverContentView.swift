@@ -11,6 +11,10 @@ struct PopoverContentView: View {
     @State private var lastRefreshTime = Date()
     @Environment(\.colorScheme) var colorScheme
 
+    private var isCompact: Bool {
+        DataStore.shared.loadCompactPopover()
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             // Header
@@ -25,66 +29,11 @@ struct PopoverContentView: View {
                 .frame(height: 1)
                 .padding(.horizontal, 16)
 
-            // Content
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 10) {
-                    // Current Session
-                    MetricCard(
-                        icon: "clock.fill",
-                        iconGradient: [Color.orange, Color.orange.opacity(0.7)],
-                        title: "Current Session",
-                        percentage: manager.usage.sessionPercentage,
-                        resetTime: manager.usage.sessionResetTime,
-                        subtitle: "5-hour window"
-                    )
-
-                    // Weekly Usage
-                    MetricCard(
-                        icon: "calendar",
-                        iconGradient: [Color.purple, Color.purple.opacity(0.7)],
-                        title: "Weekly Usage",
-                        percentage: manager.usage.weeklyPercentage,
-                        resetTime: manager.usage.weeklyResetTime,
-                        subtitle: "7-day limit"
-                    )
-
-                    // Sonnet Weekly (if applicable)
-                    if manager.usage.opusWeeklyTokensUsed > 0 || manager.usage.opusWeeklyPercentage > 0 {
-                        MetricCard(
-                            icon: "sparkles",
-                            iconGradient: [Color.blue, Color.cyan],
-                            title: "Sonnet Weekly",
-                            percentage: manager.usage.opusWeeklyPercentage,
-                            resetTime: manager.usage.weeklyResetTime,
-                            subtitle: "Model limit"
-                        )
-                    }
-
-                    // Extra Usage (if applicable)
-                    if let used = manager.usage.costUsed, let limit = manager.usage.costLimit, limit > 0 {
-                        MetricCard(
-                            icon: "dollarsign.circle.fill",
-                            iconGradient: [Color.green, Color.mint],
-                            title: "Extra Usage",
-                            percentage: (used / limit) * 100.0,
-                            resetTime: nil,
-                            subtitle: String(format: "$%.2f / $%.2f", used, limit)
-                        )
-                    }
-
-                    // API Usage (if enabled)
-                    if let apiUsage = manager.apiUsage, DataStore.shared.loadAPITrackingEnabled() {
-                        MetricCard(
-                            icon: "server.rack",
-                            iconGradient: [Color.cyan, Color.teal],
-                            title: "API Credits",
-                            percentage: apiUsage.usagePercentage,
-                            resetTime: nil,
-                            subtitle: "\(apiUsage.formattedUsed) / \(apiUsage.formattedRemaining)"
-                        )
-                    }
-                }
-                .padding(12)
+            // Content - Card or Compact mode
+            if isCompact {
+                compactContent
+            } else {
+                cardContent
             }
 
             // Footer
@@ -107,13 +56,154 @@ struct PopoverContentView: View {
                 onQuit: onQuit
             )
         }
-        .frame(width: 300)
+        .frame(width: isCompact ? 260 : 300)
         .background(
             ZStack {
                 VisualEffectView(material: .hudWindow, blendingMode: .behindWindow)
                 Color.black.opacity(colorScheme == .dark ? 0.3 : 0.05)
             }
         )
+    }
+
+    // MARK: - Card Mode Content
+    private var cardContent: some View {
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: 10) {
+                // Current Session
+                MetricCard(
+                    icon: "clock.fill",
+                    title: "Current Session",
+                    percentage: manager.usage.sessionPercentage,
+                    resetTime: manager.usage.sessionResetTime,
+                    subtitle: "5-hour window"
+                )
+
+                // Weekly Usage
+                MetricCard(
+                    icon: "calendar",
+                    title: "Weekly Usage",
+                    percentage: manager.usage.weeklyPercentage,
+                    resetTime: manager.usage.weeklyResetTime,
+                    subtitle: "7-day limit"
+                )
+
+                // Sonnet Weekly (if applicable)
+                if manager.usage.opusWeeklyTokensUsed > 0 || manager.usage.opusWeeklyPercentage > 0 {
+                    MetricCard(
+                        icon: "sparkles",
+                        title: "Sonnet Weekly",
+                        percentage: manager.usage.opusWeeklyPercentage,
+                        resetTime: manager.usage.weeklyResetTime,
+                        subtitle: "Model limit"
+                    )
+                }
+
+                // Extra Usage (if applicable)
+                if let used = manager.usage.costUsed, let limit = manager.usage.costLimit, limit > 0 {
+                    MetricCard(
+                        icon: "dollarsign.circle.fill",
+                        title: "Extra Usage",
+                        percentage: (used / limit) * 100.0,
+                        resetTime: nil,
+                        subtitle: String(format: "$%.2f / $%.2f", used, limit)
+                    )
+                }
+
+                // API Usage (if enabled)
+                if let apiUsage = manager.apiUsage, DataStore.shared.loadAPITrackingEnabled() {
+                    MetricCard(
+                        icon: "server.rack",
+                        title: "API Credits",
+                        percentage: apiUsage.usagePercentage,
+                        resetTime: nil,
+                        subtitle: "\(apiUsage.formattedUsed) / \(apiUsage.formattedRemaining)"
+                    )
+                }
+            }
+            .padding(12)
+        }
+    }
+
+    // MARK: - Compact Mode Content
+    private var compactContent: some View {
+        VStack(spacing: 0) {
+            CompactMetricRow(
+                title: "Session",
+                percentage: manager.usage.sessionPercentage
+            )
+
+            CompactMetricRow(
+                title: "Weekly",
+                percentage: manager.usage.weeklyPercentage
+            )
+
+            if manager.usage.opusWeeklyTokensUsed > 0 || manager.usage.opusWeeklyPercentage > 0 {
+                CompactMetricRow(
+                    title: "Sonnet",
+                    percentage: manager.usage.opusWeeklyPercentage
+                )
+            }
+
+            if let used = manager.usage.costUsed, let limit = manager.usage.costLimit, limit > 0 {
+                CompactMetricRow(
+                    title: "Extra",
+                    percentage: (used / limit) * 100.0
+                )
+            }
+
+            if let apiUsage = manager.apiUsage, DataStore.shared.loadAPITrackingEnabled() {
+                CompactMetricRow(
+                    title: "API",
+                    percentage: apiUsage.usagePercentage
+                )
+            }
+        }
+        .padding(.vertical, 8)
+        .padding(.horizontal, 12)
+    }
+}
+
+// MARK: - Compact Metric Row
+struct CompactMetricRow: View {
+    let title: String
+    let percentage: Double
+
+    @Environment(\.colorScheme) var colorScheme
+
+    private var statusColor: Color {
+        switch percentage {
+        case 0..<50: return Color(red: 0.34, green: 0.80, blue: 0.50)
+        case 50..<75: return Color(red: 1.0, green: 0.75, blue: 0.30)
+        case 75..<90: return Color(red: 1.0, green: 0.55, blue: 0.30)
+        default: return Color(red: 1.0, green: 0.40, blue: 0.40)
+        }
+    }
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Text(title)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundColor(.primary.opacity(0.8))
+                .frame(width: 50, alignment: .leading)
+
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(Color.primary.opacity(colorScheme == .dark ? 0.1 : 0.08))
+
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(statusColor)
+                        .frame(width: geo.size.width * min(max(percentage / 100.0, 0), 1))
+                }
+            }
+            .frame(height: 4)
+
+            Text("\(Int(percentage))%")
+                .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                .foregroundColor(statusColor)
+                .frame(width: 36, alignment: .trailing)
+        }
+        .padding(.vertical, 6)
     }
 }
 
@@ -187,7 +277,6 @@ struct PopoverHeader: View {
 // MARK: - Metric Card
 struct MetricCard: View {
     let icon: String
-    let iconGradient: [Color]
     let title: String
     let percentage: Double
     let resetTime: Date?
@@ -209,21 +298,15 @@ struct MetricCard: View {
         VStack(alignment: .leading, spacing: 10) {
             // Header
             HStack(spacing: 8) {
-                // Icon with gradient background
+                // Icon with monochrome background (Raycast style)
                 ZStack {
                     RoundedRectangle(cornerRadius: 6)
-                        .fill(
-                            LinearGradient(
-                                colors: iconGradient,
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
+                        .fill(Color.primary.opacity(colorScheme == .dark ? 0.12 : 0.08))
                         .frame(width: 24, height: 24)
 
                     Image(systemName: icon)
                         .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(.white)
+                        .foregroundColor(.primary.opacity(0.6))
                 }
 
                 Text(title)

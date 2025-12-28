@@ -4,6 +4,7 @@ import SwiftUI
 struct AppearanceSettingsView: View {
     @State private var iconStyle: MenuBarIconStyle = DataStore.shared.loadMenuBarIconStyle()
     @State private var monochromeMode: Bool = DataStore.shared.loadMonochromeMode()
+    @State private var compactPopover: Bool = DataStore.shared.loadCompactPopover()
 
     var body: some View {
         VStack(spacing: 16) {
@@ -43,6 +44,21 @@ struct AppearanceSettingsView: View {
                 .onChange(of: monochromeMode) { _, newValue in
                     DataStore.shared.saveMonochromeMode(newValue)
                     NotificationCenter.default.post(name: .menuBarIconStyleChanged, object: nil)
+                }
+            }
+
+            // Popover Style Card
+            GlassCard(title: "Popover") {
+                SettingRow(
+                    title: "Compact Mode",
+                    subtitle: "Minimal layout without cards"
+                ) {
+                    Toggle("", isOn: $compactPopover)
+                        .toggleStyle(.switch)
+                        .labelsHidden()
+                }
+                .onChange(of: compactPopover) { _, newValue in
+                    DataStore.shared.saveCompactPopover(newValue)
                 }
             }
 

@@ -33,6 +33,9 @@ enum Constants {
         // Menu bar icon style
         static let menuBarIconStyle = "menuBarIconStyle"
         static let monochromeMode = "monochromeMode"
+
+        // Popover style
+        static let compactPopover = "compactPopover"
     }
 
     // Claude Code paths
