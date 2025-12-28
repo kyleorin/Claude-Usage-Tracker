@@ -13,13 +13,6 @@ struct SetupWizardView: View {
 
     private let apiService = ClaudeAPIService()
 
-    enum ValidationState {
-        case idle
-        case validating
-        case success(String)
-        case error(String)
-    }
-
     var body: some View {
         VStack(spacing: 0) {
             // Header
