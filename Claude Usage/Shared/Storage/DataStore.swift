@@ -37,6 +37,16 @@ enum MenuBarIconStyle: String, CaseIterable, Codable {
             return "Minimalist dot indicator"
         }
     }
+
+    var icon: String {
+        switch self {
+        case .battery: return "battery.75"
+        case .progressBar: return "chart.bar.fill"
+        case .percentageOnly: return "percent"
+        case .icon: return "circle.dotted"
+        case .compact: return "circle.fill"
+        }
+    }
 }
 
 /// Manages shared data storage between app and widgets using App Groups

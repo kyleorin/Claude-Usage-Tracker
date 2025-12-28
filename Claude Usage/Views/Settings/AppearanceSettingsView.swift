@@ -89,17 +89,3 @@ struct IconStyleOption: View {
         .onHover { isHovered = $0 }
     }
 }
-
-// MARK: - Menu Bar Icon Style Extension
-
-extension MenuBarIconStyle {
-    var icon: String {
-        switch self {
-        case .battery: return "battery.75"
-        case .progressBar: return "chart.bar.fill"
-        case .percentageOnly: return "percent"
-        case .icon: return "circle.dotted"
-        case .compact: return "circle.fill"
-        }
-    }
-}
