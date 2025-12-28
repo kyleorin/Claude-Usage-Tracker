@@ -1,75 +1,141 @@
 import SwiftUI
 
-/// Modern macOS-native color palette
+/// Raycast-inspired color palette with vibrant accents and glass effects
 enum SettingsColors {
-    // MARK: - Accent Colors
+    // MARK: - Accent Colors (Vibrant gradients)
     static let accent = Color.accentColor
-    static let accentGreen = Color(red: 0.28, green: 0.75, blue: 0.42)
-    static let accentBlue = Color(red: 0.35, green: 0.55, blue: 0.85)
-    static let accentPurple = Color(red: 0.55, green: 0.36, blue: 0.76)
-    static let accentOrange = Color(red: 0.95, green: 0.55, blue: 0.25)
-    static let accentRed = Color(red: 0.92, green: 0.34, blue: 0.34)
 
-    // MARK: - Surfaces
-    static let surfacePrimary = Color(nsColor: .windowBackgroundColor)
-    static let surfaceSecondary = Color(nsColor: .controlBackgroundColor)
-    static let surfaceTertiary = Color(nsColor: .underPageBackgroundColor)
+    static let accentGreen = Color(red: 0.34, green: 0.80, blue: 0.50)
+    static let accentGreenDark = Color(red: 0.24, green: 0.65, blue: 0.40)
 
-    // MARK: - Glass Effects
-    static let glassBackground = Color.white.opacity(0.05)
-    static let glassBorder = Color.white.opacity(0.1)
-    static let glassHighlight = Color.white.opacity(0.15)
+    static let accentBlue = Color(red: 0.40, green: 0.60, blue: 0.95)
+    static let accentBlueDark = Color(red: 0.30, green: 0.50, blue: 0.85)
 
-    // MARK: - Text
-    static let textPrimary = Color.primary
-    static let textSecondary = Color.secondary
-    static let textTertiary = Color.secondary.opacity(0.6)
+    static let accentPurple = Color(red: 0.60, green: 0.40, blue: 0.90)
+    static let accentPurpleDark = Color(red: 0.50, green: 0.30, blue: 0.80)
+
+    static let accentOrange = Color(red: 1.0, green: 0.60, blue: 0.30)
+    static let accentOrangeDark = Color(red: 0.95, green: 0.50, blue: 0.20)
+
+    static let accentRed = Color(red: 1.0, green: 0.40, blue: 0.40)
+    static let accentRedDark = Color(red: 0.90, green: 0.30, blue: 0.30)
+
+    static let accentCyan = Color(red: 0.30, green: 0.80, blue: 0.90)
+    static let accentCyanDark = Color(red: 0.20, green: 0.70, blue: 0.80)
+
+    static let accentPink = Color(red: 0.95, green: 0.45, blue: 0.65)
+    static let accentPinkDark = Color(red: 0.85, green: 0.35, blue: 0.55)
+
+    // MARK: - Glass Surfaces
+    static let glassLight = Color.white.opacity(0.06)
+    static let glassMedium = Color.white.opacity(0.10)
+    static let glassStrong = Color.white.opacity(0.15)
+    static let glassBorder = Color.white.opacity(0.08)
+    static let glassBorderStrong = Color.white.opacity(0.12)
+
+    // MARK: - Dark overlay
+    static let darkOverlay = Color.black.opacity(0.25)
+    static let darkOverlayLight = Color.black.opacity(0.15)
 
     // MARK: - Status
-    static let success = Color(red: 0.28, green: 0.75, blue: 0.42)
-    static let warning = Color(red: 0.95, green: 0.68, blue: 0.25)
-    static let error = Color(red: 0.92, green: 0.34, blue: 0.34)
-    static let info = Color(red: 0.35, green: 0.55, blue: 0.85)
+    static let success = Color(red: 0.34, green: 0.80, blue: 0.50)
+    static let warning = Color(red: 1.0, green: 0.75, blue: 0.30)
+    static let error = Color(red: 1.0, green: 0.40, blue: 0.40)
+    static let info = Color(red: 0.40, green: 0.60, blue: 0.95)
 
-    // MARK: - Sidebar
-    static let sidebarBackground = Color(nsColor: .controlBackgroundColor).opacity(0.5)
-    static let sidebarSelected = Color.accentColor
-    static let sidebarHover = Color.primary.opacity(0.05)
+    // MARK: - Gradient Presets
+    static func gradient(_ base: Color, dark: Color) -> LinearGradient {
+        LinearGradient(
+            colors: [base, dark],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
+
+    static var greenGradient: LinearGradient {
+        gradient(accentGreen, dark: accentGreenDark)
+    }
+
+    static var blueGradient: LinearGradient {
+        gradient(accentBlue, dark: accentBlueDark)
+    }
+
+    static var purpleGradient: LinearGradient {
+        gradient(accentPurple, dark: accentPurpleDark)
+    }
+
+    static var orangeGradient: LinearGradient {
+        gradient(accentOrange, dark: accentOrangeDark)
+    }
+
+    static var redGradient: LinearGradient {
+        gradient(accentRed, dark: accentRedDark)
+    }
+
+    static var cyanGradient: LinearGradient {
+        gradient(accentCyan, dark: accentCyanDark)
+    }
 }
 
-/// Glass-style view modifiers
-struct GlassBackground: ViewModifier {
+// MARK: - Glass Card Modifier
+
+struct RaycastGlassCard: ViewModifier {
+    @Environment(\.colorScheme) var colorScheme
     var cornerRadius: CGFloat = 12
-    var padding: CGFloat = 0
 
     func body(content: Content) -> some View {
         content
-            .padding(padding)
             .background(
-                RoundedRectangle(cornerRadius: cornerRadius)
-                    .fill(.ultraThinMaterial)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: cornerRadius)
-                    .stroke(Color.white.opacity(0.1), lineWidth: 0.5)
+                ZStack {
+                    RoundedRectangle(cornerRadius: cornerRadius)
+                        .fill(Color.white.opacity(colorScheme == .dark ? 0.05 : 0.6))
+
+                    RoundedRectangle(cornerRadius: cornerRadius)
+                        .stroke(Color.white.opacity(colorScheme == .dark ? 0.08 : 0.3), lineWidth: 0.5)
+                }
             )
     }
 }
 
-struct SoftShadow: ViewModifier {
+// MARK: - Icon Badge
+
+struct IconBadge: View {
+    let icon: String
+    let gradient: LinearGradient
+    var size: CGFloat = 28
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: size * 0.25)
+                .fill(gradient)
+                .frame(width: size, height: size)
+                .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
+
+            Image(systemName: icon)
+                .font(.system(size: size * 0.45, weight: .semibold))
+                .foregroundColor(.white)
+        }
+    }
+}
+
+// MARK: - Glow Effect
+
+struct GlowEffect: ViewModifier {
+    let color: Color
+    var radius: CGFloat = 8
+
     func body(content: Content) -> some View {
         content
-            .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 2)
-            .shadow(color: .black.opacity(0.04), radius: 2, x: 0, y: 1)
+            .shadow(color: color.opacity(0.4), radius: radius)
     }
 }
 
 extension View {
-    func glassBackground(cornerRadius: CGFloat = 12, padding: CGFloat = 0) -> some View {
-        modifier(GlassBackground(cornerRadius: cornerRadius, padding: padding))
+    func raycastCard(cornerRadius: CGFloat = 12) -> some View {
+        modifier(RaycastGlassCard(cornerRadius: cornerRadius))
     }
 
-    func softShadow() -> some View {
-        modifier(SoftShadow())
+    func glow(_ color: Color, radius: CGFloat = 8) -> some View {
+        modifier(GlowEffect(color: color, radius: radius))
     }
 }
