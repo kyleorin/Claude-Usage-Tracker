@@ -9,10 +9,8 @@ struct PopoverContentView: View {
 
     @State private var isRefreshing = false
     @State private var lastRefreshTime = Date()
+    @State private var isCompact: Bool = DataStore.shared.loadCompactPopover()
     @Environment(\.colorScheme) var colorScheme
-
-    @AppStorage(Constants.UserDefaultsKeys.compactPopover, store: UserDefaults(suiteName: Constants.appGroupIdentifier))
-    private var isCompact: Bool = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -62,6 +60,9 @@ struct PopoverContentView: View {
                 Color.black.opacity(colorScheme == .dark ? 0.3 : 0.05)
             }
         )
+        .onReceive(NotificationCenter.default.publisher(for: .popoverStyleChanged)) { _ in
+            isCompact = DataStore.shared.loadCompactPopover()
+        }
     }
 
     // MARK: - Card Mode Content

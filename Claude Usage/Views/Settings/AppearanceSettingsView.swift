@@ -60,6 +60,9 @@ struct AppearanceSettingsView: View {
                         .toggleStyle(.switch)
                         .labelsHidden()
                 }
+                .onChange(of: compactPopover) { _, _ in
+                    NotificationCenter.default.post(name: .popoverStyleChanged, object: nil)
+                }
             }
 
             Spacer()
