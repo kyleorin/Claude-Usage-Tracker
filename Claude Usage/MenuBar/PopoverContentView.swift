@@ -163,7 +163,7 @@ struct PopoverHeader: View {
             }
 
             VStack(alignment: .leading, spacing: 2) {
-                Text("ClaudeUsage")
+                Text("CCStats")
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(.primary)
 

@@ -487,7 +487,7 @@ class MenuBarManager: NSObject, ObservableObject {
             let hostingController = NSHostingController(rootView: settingsView)
 
             let window = NSWindow(contentViewController: hostingController)
-            window.title = "ClaudeUsage - Settings"
+            window.title = "CCStats - Settings"
             window.styleMask = [.titled, .closable, .miniaturizable]
             window.setContentSize(NSSize(width: 720, height: 600))
             window.center()
@@ -517,7 +517,7 @@ extension MenuBarManager: NSPopoverDelegate {
         let newContentViewController = createContentViewController()
 
         let window = NSWindow(contentViewController: newContentViewController)
-        window.title = "ClaudeUsage"
+        window.title = "CCStats"
         window.styleMask = [.titled, .closable]
         window.setContentSize(NSSize(width: 340, height: 500))
         window.isReleasedWhenClosed = false

@@ -19,7 +19,7 @@ struct AboutView: View {
                             .frame(width: 56, height: 56)
 
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("ClaudeUsage")
+                            Text("CCStats")
                                 .font(.system(size: 20, weight: .semibold))
 
                             Text("Version \(appVersion)")
