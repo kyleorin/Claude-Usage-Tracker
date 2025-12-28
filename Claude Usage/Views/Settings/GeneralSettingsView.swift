@@ -1,10 +1,3 @@
-//
-//  GeneralSettingsView.swift
-//  Claude Usage - General App Settings
-//
-//  Created by Claude Code on 2025-12-20.
-//
-
 import SwiftUI
 
 /// General app behavior and preferences
@@ -14,76 +7,69 @@ struct GeneralSettingsView: View {
     @State private var launchAtLogin: Bool = LaunchAtLoginManager.shared.isEnabled
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Spacing.sectionSpacing) {
-            // Header
-            SettingsHeader(
-                title: "General Settings",
-                subtitle: "Configure app behavior and preferences"
-            )
-
-            Divider()
-
-            // Launch at Login Toggle
-            SettingToggle(
-                title: "Launch at login",
-                description: "Automatically start Claude Usage Tracker when you log in to your Mac",
-                isOn: $launchAtLogin
-            )
-            .onChange(of: launchAtLogin) { _, newValue in
-                let success = LaunchAtLoginManager.shared.setEnabled(newValue)
-                if !success {
-                    // Revert the toggle if the operation failed
-                    launchAtLogin = LaunchAtLoginManager.shared.isEnabled
+        VStack(spacing: 16) {
+            // Startup Card
+            GlassCard(title: "Startup") {
+                SettingRow(
+                    title: "Launch at Login",
+                    subtitle: "Start ClaudeUsage when you log in"
+                ) {
+                    Toggle("", isOn: $launchAtLogin)
+                        .toggleStyle(.switch)
+                        .labelsHidden()
+                }
+                .onChange(of: launchAtLogin) { _, newValue in
+                    let success = LaunchAtLoginManager.shared.setEnabled(newValue)
+                    if !success {
+                        launchAtLogin = LaunchAtLoginManager.shared.isEnabled
+                    }
                 }
             }
 
-            Divider()
+            // Refresh Card
+            GlassCard(title: "Data Refresh") {
+                VStack(alignment: .leading, spacing: 14) {
+                    HStack {
+                        Text("Update Interval")
+                            .font(.system(size: 13))
 
-            // Data Refresh Section
-            VStack(alignment: .leading, spacing: Spacing.md) {
-                Text("Refresh Interval")
-                    .font(Typography.sectionHeader)
+                        Spacer()
 
-                HStack {
-                    Slider(value: $refreshInterval, in: 5...120, step: 1)
+                        Text("\(Int(refreshInterval)) seconds")
+                            .font(.system(size: 13, weight: .medium, design: .monospaced))
+                            .foregroundColor(.secondary)
+                    }
+
+                    Slider(value: $refreshInterval, in: 5...120, step: 5)
                         .onChange(of: refreshInterval) { _, newValue in
                             DataStore.shared.saveRefreshInterval(newValue)
                         }
 
-                    Text("\(Int(refreshInterval))s")
-                        .font(Typography.monospacedValue)
+                    Text("Lower values provide more real-time data but use more resources")
+                        .font(.system(size: 11))
                         .foregroundColor(.secondary)
-                        .frame(width: 40, alignment: .trailing)
                 }
-
-                Text("Shorter intervals provide more real-time data but may impact battery life")
-                    .font(Typography.caption)
-                    .foregroundColor(.secondary)
             }
 
-            // Usage Tracking Options
-            SettingToggle(
-                title: "Check Extra Usage Limit",
-                description: "Fetch and display monthly cost and overage limit information",
-                isOn: $checkOverageLimitEnabled
-            )
-            .onChange(of: checkOverageLimitEnabled) { _, newValue in
-                DataStore.shared.saveCheckOverageLimitEnabled(newValue)
+            // Tracking Card
+            GlassCard(title: "Usage Tracking") {
+                SettingRow(
+                    title: "Track Extra Usage",
+                    subtitle: "Show monthly cost and overage limits"
+                ) {
+                    Toggle("", isOn: $checkOverageLimitEnabled)
+                        .toggleStyle(.switch)
+                        .labelsHidden()
+                }
+                .onChange(of: checkOverageLimitEnabled) { _, newValue in
+                    DataStore.shared.saveCheckOverageLimitEnabled(newValue)
+                }
             }
 
             Spacer()
         }
-        .contentPadding()
         .onAppear {
-            // Refresh the launch at login state when view appears
             launchAtLogin = LaunchAtLoginManager.shared.isEnabled
         }
     }
-}
-
-// MARK: - Previews
-
-#Preview {
-    GeneralSettingsView(refreshInterval: .constant(30))
-        .frame(width: 520, height: 600)
 }

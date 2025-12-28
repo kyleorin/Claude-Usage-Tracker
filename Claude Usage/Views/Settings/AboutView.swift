@@ -1,292 +1,137 @@
-//
-//  AboutView.swift
-//  Claude Usage - About and Credits
-//
-//  Created by Claude Code on 2025-12-20.
-//
-
 import SwiftUI
 
-/// About page with app information and contributors
+/// Clean About page with app information
 struct AboutView: View {
-    @State private var contributors: [Contributor] = []
-    @State private var isLoadingContributors = false
-    @State private var contributorsError: String?
-
     private var appVersion: String {
-        if let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String {
-            return version
-        }
-        return "Unknown"
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
     }
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: Spacing.sectionSpacing) {
-                // Header with App Info
-                VStack(spacing: Spacing.md) {
-                    Image("AboutLogo")
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(width: 64, height: 64)
+        VStack(spacing: 20) {
+            // App Info Card
+            GlassCard {
+                VStack(spacing: 16) {
+                    // Logo and Version
+                    HStack(spacing: 16) {
+                        Image("AboutLogo")
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 56, height: 56)
 
-                    VStack(spacing: Spacing.xs) {
-                        Text("Claude Usage Tracker")
-                            .font(Typography.title)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("CCStats")
+                                .font(.system(size: 20, weight: .semibold))
 
-                        Text("Version \(appVersion)")
-                            .font(Typography.caption)
+                            Text("Version \(appVersion)")
+                                .font(.system(size: 12))
+                                .foregroundColor(.secondary)
+                        }
+
+                        Spacer()
+                    }
+
+                    Divider()
+
+                    // Description
+                    Text("A native macOS app for monitoring your Claude AI usage limits. Track your 5-hour session window and weekly limits in real-time from your menu bar.")
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
+            // Links Card
+            GlassCard(title: "Resources") {
+                VStack(spacing: 0) {
+                    AboutLink(
+                        title: "Claude Status",
+                        subtitle: "Check system status",
+                        icon: "bolt.horizontal",
+                        url: "https://status.claude.com"
+                    )
+
+                    Divider().padding(.vertical, 8)
+
+                    AboutLink(
+                        title: "Anthropic",
+                        subtitle: "Learn more about Claude",
+                        icon: "sparkles",
+                        url: "https://www.anthropic.com"
+                    )
+                }
+            }
+
+            // Info Card
+            GlassCard(title: "Info") {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text("License")
+                            .font(.system(size: 12))
                             .foregroundColor(.secondary)
+                        Spacer()
+                        Text("MIT")
+                            .font(.system(size: 12, weight: .medium))
                     }
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.top, Spacing.lg)
 
-                Divider()
-
-                // Creator
-                VStack(alignment: .leading, spacing: Spacing.md) {
-                    Text("Created By")
-                        .font(Typography.sectionHeader)
-
-                    Button(action: {
-                        if let url = URL(string: "https://github.com/hamed-elfayome") {
-                            NSWorkspace.shared.open(url)
-                        }
-                    }) {
-                        HStack(spacing: Spacing.md) {
-                            Image(systemName: "person.circle.fill")
-                                .font(.system(size: 20))
-                                .foregroundColor(.secondary)
-
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Hamed Elfayome")
-                                    .font(Typography.body)
-                                    .foregroundColor(.primary)
-
-                                Text("@hamed-elfayome")
-                                    .font(Typography.caption)
-                                    .foregroundColor(.secondary)
-                            }
-
-                            Spacer()
-
-                            Image(systemName: "arrow.up.right")
-                                .font(.system(size: 10))
-                                .foregroundColor(.secondary)
-                        }
+                    HStack {
+                        Text("Platform")
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary)
+                        Spacer()
+                        Text("macOS 13+")
+                            .font(.system(size: 12, weight: .medium))
                     }
-                    .buttonStyle(.plain)
-                }
-
-                // Contributors
-                if !contributors.isEmpty {
-                    VStack(alignment: .leading, spacing: Spacing.md) {
-                        Text("Contributors (\(contributors.count))")
-                            .font(Typography.sectionHeader)
-
-                        ContributorsGridView(contributors: contributors)
-                    }
-                } else if isLoadingContributors {
-                    VStack(alignment: .leading, spacing: Spacing.md) {
-                        Text("Contributors")
-                            .font(Typography.sectionHeader)
-
-                        ProgressView()
-                            .scaleEffect(0.7)
-                            .frame(maxWidth: .infinity, alignment: .center)
-                            .padding(.vertical, Spacing.md)
-                    }
-                }
-
-                // Links
-                VStack(alignment: .leading, spacing: Spacing.md) {
-                    Text("Links")
-                        .font(Typography.sectionHeader)
-
-                    VStack(spacing: Spacing.sm) {
-                        LinkButton(title: "Star on GitHub", icon: "star.fill") {
-                            if let url = URL(string: "https://github.com/hamed-elfayome/Claude-Usage-Tracker") {
-                                NSWorkspace.shared.open(url)
-                            }
-                        }
-
-                        LinkButton(title: "Report Issue", icon: "exclamationmark.triangle") {
-                            if let url = URL(string: "https://github.com/hamed-elfayome/Claude-Usage-Tracker/issues") {
-                                NSWorkspace.shared.open(url)
-                            }
-                        }
-
-                        LinkButton(title: "Send Feedback", icon: "envelope") {
-                            if let url = URL(string: "mailto:hamedelfayome@gmail.com") {
-                                NSWorkspace.shared.open(url)
-                            }
-                        }
-                    }
-                }
-
-                // Footer
-                VStack(spacing: Spacing.xs) {
-                    Text("MIT License • Open Source")
-                        .font(Typography.caption)
-                        .foregroundColor(.secondary)
-
-                    Text("© 2025 Hamed Elfayome")
-                        .font(Typography.caption)
-                        .foregroundColor(.secondary)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, Spacing.md)
-
-                Spacer()
-            }
-            .padding(28)
-        }
-        .onAppear {
-            if contributors.isEmpty && !isLoadingContributors {
-                fetchContributors()
-            }
-        }
-    }
-
-    private func fetchContributors() {
-        isLoadingContributors = true
-        contributorsError = nil
-
-        Task {
-            do {
-                let fetchedContributors = try await GitHubService.shared.fetchContributors()
-                await MainActor.run {
-                    withAnimation(.spring(response: 0.6, dampingFraction: 0.7)) {
-                        self.contributors = fetchedContributors
-                        self.isLoadingContributors = false
-                    }
-                }
-            } catch {
-                await MainActor.run {
-                    self.contributorsError = error.localizedDescription
-                    self.isLoadingContributors = false
                 }
             }
+
+            Spacer()
         }
     }
 }
 
-// MARK: - Link Button
+// MARK: - About Link
 
-struct LinkButton: View {
+struct AboutLink: View {
     let title: String
+    let subtitle: String
     let icon: String
-    let action: () -> Void
+    let url: String
+
+    @State private var isHovered = false
 
     var body: some View {
-        Button(action: action) {
-            HStack(spacing: Spacing.iconTextSpacing) {
+        Button(action: {
+            if let url = URL(string: url) {
+                NSWorkspace.shared.open(url)
+            }
+        }) {
+            HStack(spacing: 12) {
                 Image(systemName: icon)
-                    .font(.system(size: 12))
-                    .foregroundColor(.secondary)
-                    .frame(width: 16)
+                    .font(.system(size: 14))
+                    .foregroundColor(SettingsColors.accentBlue)
+                    .frame(width: 20)
 
-                Text(title)
-                    .font(Typography.label)
-                    .foregroundColor(.primary)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(title)
+                        .font(.system(size: 13))
+                        .foregroundColor(.primary)
+
+                    Text(subtitle)
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                }
 
                 Spacer()
 
                 Image(systemName: "arrow.up.right")
-                    .font(.system(size: 9))
-                    .foregroundColor(.secondary)
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundColor(.secondary.opacity(0.5))
             }
+            .padding(.vertical, 4)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .onHover { isHovered = $0 }
+        .opacity(isHovered ? 0.7 : 1)
     }
-}
-
-// MARK: - Contributors Grid View
-
-struct ContributorsGridView: View {
-    let contributors: [Contributor]
-
-    var body: some View {
-        LazyVGrid(columns: [
-            GridItem(.adaptive(minimum: 40, maximum: 44), spacing: Spacing.sm)
-        ], spacing: Spacing.sm) {
-            ForEach(contributors) { contributor in
-                ContributorAvatar(contributor: contributor)
-            }
-        }
-    }
-}
-
-struct ContributorAvatar: View {
-    let contributor: Contributor
-    @State private var imageData: Data?
-    @State private var isLoadingImage = true
-
-    var body: some View {
-        Button(action: {
-            if let url = URL(string: contributor.htmlUrl) {
-                NSWorkspace.shared.open(url)
-            }
-        }) {
-            ZStack {
-                if let data = imageData, let nsImage = NSImage(data: data) {
-                    Image(nsImage: nsImage)
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(width: 40, height: 40)
-                        .clipShape(Circle())
-                } else {
-                    Circle()
-                        .fill(Color.secondary.opacity(0.1))
-                        .frame(width: 40, height: 40)
-                        .overlay(
-                            Group {
-                                if isLoadingImage {
-                                    ProgressView()
-                                        .scaleEffect(0.5)
-                                } else {
-                                    Image(systemName: "person.fill")
-                                        .font(.system(size: 16))
-                                        .foregroundColor(.secondary.opacity(0.3))
-                                }
-                            }
-                        )
-                }
-            }
-        }
-        .buttonStyle(.plain)
-        .help(contributor.login)
-        .onAppear {
-            loadAvatar()
-        }
-    }
-
-    private func loadAvatar() {
-        guard let url = URL(string: contributor.avatarUrl) else {
-            isLoadingImage = false
-            return
-        }
-
-        Task {
-            do {
-                let (data, _) = try await URLSession.shared.data(from: url)
-                await MainActor.run {
-                    self.imageData = data
-                    self.isLoadingImage = false
-                }
-            } catch {
-                await MainActor.run {
-                    self.isLoadingImage = false
-                }
-            }
-        }
-    }
-}
-
-// MARK: - Previews
-
-#Preview {
-    AboutView()
-        .frame(width: 520, height: 600)
 }
