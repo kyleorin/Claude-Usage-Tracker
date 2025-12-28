@@ -3,8 +3,12 @@ import SwiftUI
 /// Menu bar icon appearance and customization
 struct AppearanceSettingsView: View {
     @State private var iconStyle: MenuBarIconStyle = DataStore.shared.loadMenuBarIconStyle()
-    @State private var monochromeMode: Bool = DataStore.shared.loadMonochromeMode()
-    @State private var compactPopover: Bool = DataStore.shared.loadCompactPopover()
+
+    @AppStorage(Constants.UserDefaultsKeys.monochromeMode, store: UserDefaults(suiteName: Constants.appGroupIdentifier))
+    private var monochromeMode: Bool = false
+
+    @AppStorage(Constants.UserDefaultsKeys.compactPopover, store: UserDefaults(suiteName: Constants.appGroupIdentifier))
+    private var compactPopover: Bool = false
 
     var body: some View {
         VStack(spacing: 16) {
@@ -41,8 +45,7 @@ struct AppearanceSettingsView: View {
                         .toggleStyle(.switch)
                         .labelsHidden()
                 }
-                .onChange(of: monochromeMode) { _, newValue in
-                    DataStore.shared.saveMonochromeMode(newValue)
+                .onChange(of: monochromeMode) { _, _ in
                     NotificationCenter.default.post(name: .menuBarIconStyleChanged, object: nil)
                 }
             }
@@ -57,8 +60,8 @@ struct AppearanceSettingsView: View {
                         .toggleStyle(.switch)
                         .labelsHidden()
                 }
-                .onChange(of: compactPopover) { _, newValue in
-                    DataStore.shared.saveCompactPopover(newValue)
+                .onChange(of: compactPopover) { _, _ in
+                    NotificationCenter.default.post(name: .popoverStyleChanged, object: nil)
                 }
             }
 

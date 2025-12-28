@@ -128,9 +128,8 @@ class MenuBarManager: NSObject, ObservableObject {
             if popover.isShown {
                 closePopover()
             } else {
-                if popover.contentViewController == nil {
-                    popover.contentViewController = createContentViewController()
-                }
+                // Always recreate content to reflect latest settings
+                popover.contentViewController = createContentViewController()
                 popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
                 startMonitoringForOutsideClicks()
             }

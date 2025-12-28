@@ -12,7 +12,7 @@ struct GeneralSettingsView: View {
             GlassCard(title: "Startup") {
                 SettingRow(
                     title: "Launch at Login",
-                    subtitle: "Start ClaudeUsage when you log in"
+                    subtitle: "Start CCStats when you log in"
                 ) {
                     Toggle("", isOn: $launchAtLogin)
                         .toggleStyle(.switch)

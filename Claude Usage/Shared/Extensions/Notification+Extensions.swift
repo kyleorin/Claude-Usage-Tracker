@@ -10,4 +10,7 @@ import Foundation
 extension Notification.Name {
     /// Posted when the menu bar icon style preference changes
     static let menuBarIconStyleChanged = Notification.Name("menuBarIconStyleChanged")
+
+    /// Posted when the popover style preference changes
+    static let popoverStyleChanged = Notification.Name("popoverStyleChanged")
 }

@@ -24,7 +24,7 @@ struct SetupWizardView: View {
                     .frame(width: 80, height: 80)
 
                 VStack(spacing: 8) {
-                    Text("Welcome to Claude Usage Tracker")
+                    Text("Welcome to CCStats")
                         .font(.system(size: 24, weight: .semibold))
 
                     Text("Configure your API access to start tracking usage")
