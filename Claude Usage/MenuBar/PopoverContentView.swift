@@ -1,619 +1,487 @@
 import SwiftUI
 
-/// Smart, minimal, and professional popover interface
+/// Clean, modern popover interface matching CUStats design
 struct PopoverContentView: View {
     @ObservedObject var manager: MenuBarManager
     let onRefresh: () -> Void
     let onPreferences: () -> Void
     let onQuit: () -> Void
-    
+
     @State private var isRefreshing = false
-    @State private var showInsights = false
+    @State private var lastRefreshTime = Date()
 
     var body: some View {
         VStack(spacing: 0) {
-            // Smart Header with Status
-            SmartHeader(
-                usage: manager.usage,
-                status: manager.status,
+            // Header
+            AppHeader()
+
+            // Content
+            VStack(spacing: 16) {
+                // Current Session Section
+                UsageSection(
+                    icon: "clock.fill",
+                    iconColor: Color(red: 0.95, green: 0.3, blue: 0.3),
+                    title: "CURRENT SESSION",
+                    items: [
+                        UsageItem(
+                            title: "5-Hour Usage",
+                            percentage: manager.usage.sessionPercentage,
+                            resetTime: manager.usage.sessionResetTime
+                        )
+                    ]
+                )
+
+                // Weekly Limits Section
+                UsageSection(
+                    icon: "calendar",
+                    iconColor: Color(red: 0.6, green: 0.4, blue: 0.8),
+                    title: "WEEKLY LIMITS",
+                    items: buildWeeklyItems()
+                )
+
+                // API Usage Section (if enabled)
+                if let apiUsage = manager.apiUsage, DataStore.shared.loadAPITrackingEnabled() {
+                    APISection(apiUsage: apiUsage)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 16)
+
+            // Footer
+            FooterView(
+                lastRefreshTime: lastRefreshTime,
                 isRefreshing: isRefreshing,
                 onRefresh: {
-                    withAnimation(.easeInOut(duration: 0.3)) {
+                    withAnimation(.easeInOut(duration: 0.2)) {
                         isRefreshing = true
                     }
                     onRefresh()
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                        withAnimation(.easeInOut(duration: 0.3)) {
+                        withAnimation(.easeInOut(duration: 0.2)) {
                             isRefreshing = false
+                            lastRefreshTime = Date()
                         }
                     }
-                }
-            )
-
-            // Intelligent Usage Dashboard
-            SmartUsageDashboard(usage: manager.usage, apiUsage: manager.apiUsage)
-            
-            // Contextual Insights
-            if showInsights {
-                ContextualInsights(usage: manager.usage)
-                    .transition(.asymmetric(
-                        insertion: .move(edge: .top).combined(with: .opacity),
-                        removal: .move(edge: .top).combined(with: .opacity)
-                    ))
-            }
-
-            // Smart Footer with Actions
-            SmartFooter(
-                usage: manager.usage,
-                status: manager.status,
-                showInsights: $showInsights,
-                onPreferences: onPreferences,
+                },
+                onDashboard: onPreferences,
                 onQuit: onQuit
             )
         }
-        .frame(width: 280)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color(nsColor: .windowBackgroundColor))
-                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
-        )
-        .shadow(color: .black.opacity(0.15), radius: 25, x: 0, y: 10)
+        .frame(width: 320)
+        .background(Color(nsColor: .windowBackgroundColor))
+    }
+
+    private func buildWeeklyItems() -> [UsageItem] {
+        var items: [UsageItem] = [
+            UsageItem(
+                title: "7-Day Usage",
+                percentage: manager.usage.weeklyPercentage,
+                resetTime: manager.usage.weeklyResetTime
+            )
+        ]
+
+        // Add Opus/Sonnet if available
+        if manager.usage.opusWeeklyTokensUsed > 0 || manager.usage.opusWeeklyPercentage > 0 {
+            items.append(UsageItem(
+                title: "Sonnet (7-Day)",
+                percentage: manager.usage.opusWeeklyPercentage,
+                resetTime: manager.usage.weeklyResetTime.addingTimeInterval(2 * 24 * 3600) // Example offset
+            ))
+        }
+
+        // Add Extra Usage if applicable
+        if let used = manager.usage.costUsed, let limit = manager.usage.costLimit, limit > 0 {
+            let percentage = (used / limit) * 100.0
+            items.append(UsageItem(
+                title: "Extra Usage",
+                percentage: percentage,
+                resetTime: nil
+            ))
+        }
+
+        return items
     }
 }
 
-// MARK: - Smart Header Component
-struct SmartHeader: View {
-    let usage: ClaudeUsage
-    let status: ClaudeStatus
-    let isRefreshing: Bool
-    let onRefresh: () -> Void
-
-    private var statusColor: Color {
-        switch status.indicator.color {
-        case .green: return .green
-        case .yellow: return .yellow
-        case .orange: return .orange
-        case .red: return .red
-        case .gray: return .gray
-        }
-    }
-
+// MARK: - App Header
+struct AppHeader: View {
     var body: some View {
         HStack(spacing: 12) {
-            // App Logo
-            HStack(spacing: 8) {
-                Image("HeaderLogo")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 24, height: 24)
-                
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Claude Usage")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(.primary)
-
-                    // Claude Status Badge
-                    Button(action: {
-                        if let url = URL(string: "https://status.claude.com") {
-                            NSWorkspace.shared.open(url)
-                        }
-                    }) {
-                        HStack(spacing: 4) {
-                            Circle()
-                                .fill(statusColor)
-                                .frame(width: 6, height: 6)
-
-                            Text(status.description)
-                                .font(.system(size: 9, weight: .medium))
-                                .foregroundColor(.primary.opacity(0.8))
-                        }
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(
-                            Capsule()
-                                .fill(statusColor.opacity(0.12))
-                        )
-                    }
-                    .buttonStyle(.plain)
-                    .help("Click to open status.claude.com")
-                }
-            }
-            
-            Spacer()
-            
-            // Smart Refresh Button
-            Button(action: onRefresh) {
-                HStack(spacing: 4) {
-                    if isRefreshing {
-                        ProgressView()
-                            .scaleEffect(0.7)
-                    } else {
-                        Image(systemName: "arrow.clockwise")
-                            .font(.system(size: 11, weight: .medium))
-                    }
-                }
-                .foregroundColor(.secondary)
-                .frame(width: 24, height: 20)
+            // App Icon
+            Image("HeaderLogo")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 36, height: 36)
                 .background(
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(Color.secondary.opacity(0.1))
+                    Circle()
+                        .fill(Color(nsColor: .controlBackgroundColor))
                 )
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("CUStats")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.primary)
+
+                HStack(spacing: 6) {
+                    Circle()
+                        .fill(Color.green)
+                        .frame(width: 8, height: 8)
+
+                    Text("Account Session")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(Color.green)
+                }
             }
-            .buttonStyle(.plain)
-            .disabled(isRefreshing)
+
+            Spacer()
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        .padding(.vertical, 14)
+    }
+}
+
+// MARK: - Usage Section
+struct UsageSection: View {
+    let icon: String
+    let iconColor: Color
+    let title: String
+    let items: [UsageItem]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Section Header
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(iconColor)
+
+                Text(title)
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundColor(.primary)
+                    .tracking(0.5)
+            }
+
+            // Usage Items
+            VStack(spacing: 14) {
+                ForEach(items, id: \.title) { item in
+                    UsageRowView(item: item)
+                }
+            }
+        }
+        .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(Color(nsColor: .controlBackgroundColor).opacity(0.4))
-                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
+                .fill(Color(nsColor: .controlBackgroundColor).opacity(0.5))
         )
     }
 }
 
-// MARK: - Smart Usage Dashboard
-struct SmartUsageDashboard: View {
-    let usage: ClaudeUsage
-    let apiUsage: APIUsage?
-
-    var body: some View {
-        VStack(spacing: 16) {
-            // Primary Usage Card
-            SmartUsageCard(
-                title: "Session Usage",
-                subtitle: "5-hour rolling window",
-                percentage: usage.sessionPercentage,
-                resetTime: usage.sessionResetTime,
-                isPrimary: true
-            )
-
-            // Secondary Usage Cards
-            HStack(spacing: 12) {
-                SmartUsageCard(
-                    title: "Weekly",
-                    subtitle: "All models",
-                    percentage: usage.weeklyPercentage,
-                    resetTime: usage.weeklyResetTime,
-                    isPrimary: false
-                )
-
-                if usage.opusWeeklyTokensUsed > 0 {
-                    SmartUsageCard(
-                        title: "Opus",
-                        subtitle: "Weekly",
-                        percentage: usage.opusWeeklyPercentage,
-                        resetTime: nil,
-                        isPrimary: false
-                    )
-                }
-            }
-
-            if let used = usage.costUsed, let limit = usage.costLimit, let currency = usage.costCurrency, limit > 0 {
-                let percentage = (used / limit) * 100.0
-                SmartUsageCard(
-                    title: "Extra Usage",
-                    subtitle: String(format: "%.2f / %.2f %@", used / 100.0, limit / 100.0, currency),
-                    percentage: percentage,
-                    resetTime: nil,
-                    isPrimary: false
-                )
-            }
-
-            // API Usage Card (if enabled)
-            if let apiUsage = apiUsage, DataStore.shared.loadAPITrackingEnabled() {
-                APIUsageCard(apiUsage: apiUsage)
-            }
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-    }
-}
-
-// MARK: - Smart Usage Card
-struct SmartUsageCard: View {
+// MARK: - Usage Item Model
+struct UsageItem: Identifiable {
+    let id = UUID()
     let title: String
-    let subtitle: String
     let percentage: Double
     let resetTime: Date?
-    let isPrimary: Bool
-    
-    private var statusColor: Color {
+
+    var statusText: String {
         switch percentage {
-        case 0..<50: return .green
-        case 50..<80: return .orange
-        default: return .red
+        case 0..<50: return "Good"
+        case 50..<75: return "Moderate"
+        case 75..<90: return "High"
+        default: return "Critical"
         }
     }
-    
-    private var statusIcon: String {
+
+    var statusColor: Color {
         switch percentage {
-        case 0..<50: return "checkmark.circle.fill"
-        case 50..<80: return "exclamationmark.triangle.fill"
-        default: return "xmark.circle.fill"
+        case 0..<50: return Color(red: 0.2, green: 0.78, blue: 0.35)  // Green
+        case 50..<75: return Color(red: 1.0, green: 0.75, blue: 0.0)  // Yellow/Orange
+        case 75..<90: return Color(red: 1.0, green: 0.5, blue: 0.0)   // Orange
+        default: return Color(red: 0.95, green: 0.35, blue: 0.35)     // Coral Red
         }
     }
-    
+
+    var progressColor: Color {
+        statusColor
+    }
+}
+
+// MARK: - Usage Row View
+struct UsageRowView: View {
+    let item: UsageItem
+
     var body: some View {
-        VStack(spacing: isPrimary ? 12 : 8) {
-            // Header
+        VStack(alignment: .leading, spacing: 8) {
+            // Title Row
             HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
-                        .font(.system(size: isPrimary ? 13 : 11, weight: .semibold))
-                        .foregroundColor(.primary)
-                    
-                    Text(subtitle)
-                        .font(.system(size: isPrimary ? 10 : 9, weight: .medium))
-                        .foregroundColor(.secondary)
-                }
-                
-                Spacer()
-                
-                // Status indicator
-                HStack(spacing: 4) {
-                    Image(systemName: statusIcon)
-                        .font(.system(size: isPrimary ? 12 : 10, weight: .medium))
-                        .foregroundColor(statusColor)
-                    
-                    Text("\(Int(percentage))%")
-                        .font(.system(size: isPrimary ? 16 : 14, weight: .bold, design: .monospaced))
-                        .foregroundColor(statusColor)
-                }
-            }
-            
-            // Progress visualization
-            VStack(spacing: 6) {
-                // Animated progress bar
-                GeometryReader { geometry in
-                    ZStack(alignment: .leading) {
-                        RoundedRectangle(cornerRadius: 4)
-                            .fill(Color.secondary.opacity(0.15))
-
-                        RoundedRectangle(cornerRadius: 4)
-                            .fill(
-                                LinearGradient(
-                                    colors: [statusColor, statusColor.opacity(0.8)],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
-                            )
-                            .frame(width: geometry.size.width * min(percentage / 100.0, 1.0))
-                    }
-                    .animation(.easeInOut(duration: 0.8), value: percentage)
-                }
-                .frame(height: isPrimary ? 8 : 6)
-                
-                // Reset time information
-                if let reset = resetTime {
-                    HStack {
-                        Spacer()
-                        Text("Resets \(reset.resetTimeString())")
-                            .font(.system(size: isPrimary ? 9 : 8, weight: .medium))
-                            .foregroundColor(.secondary)
-                    }
-                }
-            }
-        }
-        .padding(isPrimary ? 16 : 12)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color(nsColor: .controlBackgroundColor).opacity(0.4))
-                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
-        )
-    }
-}
-
-// MARK: - Contextual Insights
-struct ContextualInsights: View {
-    let usage: ClaudeUsage
-    
-    private var insights: [Insight] {
-        var result: [Insight] = []
-        
-        // Session insights
-        if usage.sessionPercentage > 80 {
-            result.append(Insight(
-                icon: "exclamationmark.triangle.fill",
-                color: .orange,
-                title: "High Session Usage",
-                description: "Consider taking a break to reset your session window"
-            ))
-        }
-        
-        // Weekly insights
-        if usage.weeklyPercentage > 90 {
-            result.append(Insight(
-                icon: "clock.fill",
-                color: .red,
-                title: "Weekly Limit Approaching",
-                description: "You're close to your weekly token limit"
-            ))
-        }
-        
-        // Efficiency insights
-        if usage.sessionPercentage < 20 && usage.weeklyPercentage < 30 {
-            result.append(Insight(
-                icon: "checkmark.circle.fill",
-                color: .green,
-                title: "Efficient Usage",
-                description: "Great job managing your token consumption!"
-            ))
-        }
-        
-        return result
-    }
-    
-    var body: some View {
-        VStack(spacing: 8) {
-            ForEach(insights, id: \.title) { insight in
-                HStack(spacing: 10) {
-                    Image(systemName: insight.icon)
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(insight.color)
-                        .frame(width: 16)
-                    
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(insight.title)
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundColor(.primary)
-                        
-                        Text(insight.description)
-                            .font(.system(size: 9, weight: .medium))
-                            .foregroundColor(.secondary)
-                            .lineLimit(2)
-                    }
-                    
-                    Spacer()
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .background(
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(insight.color.opacity(0.08))
-                )
-            }
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
-    }
-}
-
-struct Insight {
-    let icon: String
-    let color: Color
-    let title: String
-    let description: String
-}
-
-// MARK: - Smart Footer
-struct SmartFooter: View {
-    let usage: ClaudeUsage
-    let status: ClaudeStatus
-    @Binding var showInsights: Bool
-    let onPreferences: () -> Void
-    let onQuit: () -> Void
-    
-    var body: some View {
-        VStack(spacing: 0) {
-            Divider()
-                .padding(.horizontal, 16)
-
-            // Action buttons
-            HStack(spacing: 8) {
-                SmartActionButton(
-                    icon: "gearshape.fill",
-                    title: "Settings",
-                    action: onPreferences
-                )
-                
-                SmartActionButton(
-                    icon: "power",
-                    title: "Quit",
-                    isDestructive: true,
-                    action: onQuit
-                )
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-        }
-    }
-}
-
-// MARK: - Claude Status Row
-struct ClaudeStatusRow: View {
-    let status: ClaudeStatus
-    @State private var isHovered = false
-    
-    private var statusColor: Color {
-        switch status.indicator.color {
-        case .green: return .green
-        case .yellow: return .yellow
-        case .orange: return .orange
-        case .red: return .red
-        case .gray: return .gray
-        }
-    }
-    
-    var body: some View {
-        Button(action: {
-            if let url = URL(string: "https://status.claude.com") {
-                NSWorkspace.shared.open(url)
-            }
-        }) {
-            HStack(spacing: 8) {
-                // Status indicator dot
-                Circle()
-                    .fill(statusColor)
-                    .frame(width: 8, height: 8)
-                
-                // Status text
-                Text(status.description)
-                    .font(.system(size: 11, weight: .medium))
+                Text(item.title)
+                    .font(.system(size: 14, weight: .medium))
                     .foregroundColor(.primary)
-                    .lineLimit(1)
-                
-                Spacer()
-                
-                // External link icon
-                Image(systemName: "arrow.up.right")
-                    .font(.system(size: 9, weight: .medium))
-                    .foregroundColor(.secondary.opacity(0.6))
-            }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .background(
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(isHovered ? Color.secondary.opacity(0.05) : Color.clear)
-            )
-        }
-        .buttonStyle(.plain)
-        .onHover { hovering in
-            withAnimation(.easeInOut(duration: 0.2)) {
-                isHovered = hovering
-            }
-        }
-        .help("Click to open status.claude.com")
-    }
-}
 
-// MARK: - Smart Action Button
-struct SmartActionButton: View {
-    let icon: String
-    let title: String
-    var isDestructive: Bool = false
-    let action: () -> Void
-    
-    @State private var isHovered = false
-    
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 6) {
-                Image(systemName: icon)
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundColor(isDestructive ? .red : .secondary)
-                    .frame(width: 14)
-                
-                Text(title)
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundColor(isDestructive ? .red : .primary)
-            }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .background(
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(
-                        isHovered 
-                        ? (isDestructive ? Color.red.opacity(0.1) : Color.accentColor.opacity(0.1))
-                        : Color.clear
+                Spacer()
+
+                // Status Badge
+                Text(item.statusText)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(item.statusColor)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(item.statusColor.opacity(0.12))
                     )
-            )
-        }
-        .buttonStyle(.plain)
-        .onHover { hovering in
-            withAnimation(.easeInOut(duration: 0.2)) {
-                isHovered = hovering
-            }
-        }
-    }
-}
-
-// MARK: - API Usage Card
-struct APIUsageCard: View {
-    let apiUsage: APIUsage
-
-    private var usageColor: Color {
-        switch apiUsage.usagePercentage {
-        case 0..<50: return .green
-        case 50..<80: return .orange
-        default: return .red
-        }
-    }
-
-    var body: some View {
-        VStack(spacing: 12) {
-            // Header
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("API Credits")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(.primary)
-
-                    Text("Anthropic API Console")
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundColor(.secondary)
-                }
-
-                Spacer()
 
                 // Percentage
-                Text("\(Int(apiUsage.usagePercentage))%")
-                    .font(.system(size: 16, weight: .bold, design: .monospaced))
-                    .foregroundColor(usageColor)
+                Text("\(Int(item.percentage))%")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundColor(item.statusColor)
+                    .frame(width: 50, alignment: .trailing)
             }
 
             // Progress Bar
             GeometryReader { geometry in
                 ZStack(alignment: .leading) {
                     // Background
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(Color.secondary.opacity(0.1))
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(Color.gray.opacity(0.15))
 
                     // Fill
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(usageColor)
-                        .frame(width: geometry.size.width * (apiUsage.usagePercentage / 100.0))
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(item.progressColor)
+                        .frame(width: geometry.size.width * min(item.percentage / 100.0, 1.0))
                 }
             }
             .frame(height: 6)
 
-            // Used / Remaining
-            HStack(spacing: 12) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Used")
-                        .font(.system(size: 9, weight: .medium))
-                        .foregroundColor(.secondary)
-                    Text(apiUsage.formattedUsed)
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(.primary)
-                }
-
-                Spacer()
-
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text("Remaining")
-                        .font(.system(size: 9, weight: .medium))
-                        .foregroundColor(.secondary)
-                    Text(apiUsage.formattedRemaining)
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(.primary)
-                }
-            }
-
             // Reset Time
-            if apiUsage.resetsAt > Date() {
-                HStack {
-                    Image(systemName: "clock.fill")
-                        .font(.system(size: 8))
+            if let resetTime = item.resetTime {
+                HStack(spacing: 4) {
+                    Image(systemName: "arrow.counterclockwise")
+                        .font(.system(size: 10, weight: .medium))
                         .foregroundColor(.secondary)
 
-                    Text("Resets \(apiUsage.resetsAt.formatted(.relative(presentation: .named)))")
-                        .font(.system(size: 9, weight: .medium))
+                    Text("Resets in \(resetTime.shortResetString())")
+                        .font(.system(size: 11, weight: .medium))
                         .foregroundColor(.secondary)
-
-                    Spacer()
                 }
             }
         }
-        .padding(12)
+    }
+}
+
+// MARK: - API Section
+struct APISection: View {
+    let apiUsage: APIUsage
+
+    private var statusColor: Color {
+        switch apiUsage.usagePercentage {
+        case 0..<50: return Color(red: 0.2, green: 0.78, blue: 0.35)
+        case 50..<75: return Color(red: 1.0, green: 0.75, blue: 0.0)
+        case 75..<90: return Color(red: 1.0, green: 0.5, blue: 0.0)
+        default: return Color(red: 0.95, green: 0.35, blue: 0.35)
+        }
+    }
+
+    private var statusText: String {
+        switch apiUsage.usagePercentage {
+        case 0..<50: return "Good"
+        case 50..<75: return "Moderate"
+        case 75..<90: return "High"
+        default: return "Critical"
+        }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Section Header
+            HStack(spacing: 8) {
+                Image(systemName: "server.rack")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(Color(red: 0.3, green: 0.6, blue: 0.9))
+
+                Text("API USAGE")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundColor(.primary)
+                    .tracking(0.5)
+            }
+
+            // API Usage Row
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text("API Credits")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.primary)
+
+                    Spacer()
+
+                    Text(statusText)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(statusColor)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(
+                            RoundedRectangle(cornerRadius: 6)
+                                .fill(statusColor.opacity(0.12))
+                        )
+
+                    Text("\(Int(apiUsage.usagePercentage))%")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(statusColor)
+                        .frame(width: 50, alignment: .trailing)
+                }
+
+                // Progress Bar
+                GeometryReader { geometry in
+                    ZStack(alignment: .leading) {
+                        RoundedRectangle(cornerRadius: 3)
+                            .fill(Color.gray.opacity(0.15))
+
+                        RoundedRectangle(cornerRadius: 3)
+                            .fill(statusColor)
+                            .frame(width: geometry.size.width * min(apiUsage.usagePercentage / 100.0, 1.0))
+                    }
+                }
+                .frame(height: 6)
+
+                // Credits info
+                HStack {
+                    Text(apiUsage.formattedUsed)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(.secondary)
+
+                    Text("of")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(.secondary.opacity(0.7))
+
+                    Text(apiUsage.formattedRemaining)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
+        .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(Color(nsColor: .controlBackgroundColor).opacity(0.4))
-                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .strokeBorder(usageColor.opacity(0.2), lineWidth: 1)
-                )
+                .fill(Color(nsColor: .controlBackgroundColor).opacity(0.5))
         )
+    }
+}
+
+// MARK: - Footer View
+struct FooterView: View {
+    let lastRefreshTime: Date
+    let isRefreshing: Bool
+    let onRefresh: () -> Void
+    let onDashboard: () -> Void
+    let onQuit: () -> Void
+
+    private var refreshText: String {
+        let seconds = Int(-lastRefreshTime.timeIntervalSinceNow)
+        if seconds < 5 {
+            return "just now"
+        } else if seconds < 60 {
+            return "\(seconds)s ago"
+        } else {
+            let minutes = seconds / 60
+            return "\(minutes)m ago"
+        }
+    }
+
+    var body: some View {
+        HStack(spacing: 10) {
+            // Refresh Button
+            Button(action: onRefresh) {
+                HStack(spacing: 6) {
+                    if isRefreshing {
+                        ProgressView()
+                            .scaleEffect(0.6)
+                            .frame(width: 14, height: 14)
+                    } else {
+                        Image(systemName: "arrow.clockwise")
+                            .font(.system(size: 12, weight: .medium))
+                    }
+
+                    Text(refreshText)
+                        .font(.system(size: 12, weight: .medium))
+                }
+                .foregroundColor(Color(red: 0.2, green: 0.78, blue: 0.35))
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color(red: 0.2, green: 0.78, blue: 0.35), lineWidth: 1.5)
+                )
+            }
+            .buttonStyle(.plain)
+            .disabled(isRefreshing)
+
+            Spacer()
+
+            // Dashboard Button
+            Button(action: onDashboard) {
+                HStack(spacing: 6) {
+                    Image(systemName: "square.grid.2x2")
+                        .font(.system(size: 12, weight: .medium))
+
+                    Text("Dashboard")
+                        .font(.system(size: 12, weight: .medium))
+                }
+                .foregroundColor(.primary)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color(nsColor: .controlBackgroundColor))
+                )
+            }
+            .buttonStyle(.plain)
+
+            // Quit Button
+            Button(action: onQuit) {
+                HStack(spacing: 6) {
+                    Image(systemName: "power")
+                        .font(.system(size: 12, weight: .medium))
+
+                    Text("Quit")
+                        .font(.system(size: 12, weight: .medium))
+                }
+                .foregroundColor(.primary)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color(nsColor: .controlBackgroundColor))
+                )
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(Color(nsColor: .windowBackgroundColor))
+    }
+}
+
+// MARK: - Date Extension for Short Reset String
+extension Date {
+    func shortResetString() -> String {
+        let now = Date()
+        let diff = self.timeIntervalSince(now)
+
+        if diff <= 0 {
+            return "now"
+        }
+
+        let hours = Int(diff) / 3600
+        let minutes = (Int(diff) % 3600) / 60
+
+        if hours >= 24 {
+            let days = hours / 24
+            let remainingHours = hours % 24
+            return "\(days)d \(remainingHours)h"
+        } else if hours > 0 {
+            return "\(hours)h \(minutes)m"
+        } else {
+            return "\(minutes)m"
+        }
     }
 }
