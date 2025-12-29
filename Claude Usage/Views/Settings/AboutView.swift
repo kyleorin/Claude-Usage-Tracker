@@ -6,6 +6,10 @@ struct AboutView: View {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
     }
 
+    private var buildNumber: String {
+        Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
+    }
+
     var body: some View {
         VStack(spacing: 20) {
             // App Info Card
@@ -22,12 +26,22 @@ struct AboutView: View {
                             Text("CCStats")
                                 .font(.system(size: 20, weight: .semibold))
 
-                            Text("Version \(appVersion)")
+                            Text("Version \(appVersion) (\(buildNumber))")
                                 .font(.system(size: 12))
                                 .foregroundColor(.secondary)
                         }
 
                         Spacer()
+
+                        // Check for Updates button
+                        Button(action: {
+                            UpdateService.shared.checkForUpdates()
+                        }) {
+                            Text("Check for Updates")
+                                .font(.system(size: 11, weight: .medium))
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.small)
                     }
 
                     Divider()
