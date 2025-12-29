@@ -1,7 +1,7 @@
 #!/bin/bash
-# Generate all macOS app icon sizes from ccstatsinsideicon.png
+# Generate all macOS app icon sizes from ccstatsapiconimg.png
 
-SOURCE="ccstatsinsideicon.png"
+SOURCE="ccstatsapiconimg.png"
 DEST="Claude Usage/Assets.xcassets/AppIcon.appiconset"
 
 # Check if source exists
@@ -11,7 +11,7 @@ if [ ! -f "$SOURCE" ]; then
 fi
 
 # Generate all required sizes
-echo "Generating icon sizes..."
+echo "Generating icon sizes from $SOURCE..."
 
 sips -z 16 16 "$SOURCE" --out "$DEST/icon_16x16.png"
 sips -z 32 32 "$SOURCE" --out "$DEST/icon_16x16@2x.png"
@@ -26,4 +26,4 @@ sips -z 1024 1024 "$SOURCE" --out "$DEST/icon_512x512@2x.png"
 
 echo "✅ All icon sizes generated!"
 echo ""
-echo "Now updating accent color to match the orange..."
+echo "Now rebuild in Xcode (Cmd+Shift+K to clean, then Cmd+B to build)"
